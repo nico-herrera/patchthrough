@@ -1,0 +1,1215 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<style>
+  body { margin: 0; background: #0E0D0A; -webkit-font-smoothing: antialiased; }
+  a { color: #E4633F; text-decoration: none; border-bottom: 1px solid rgba(228,99,63,0.35); }
+  a:hover { color: #F08462; border-bottom-color: rgba(240,132,98,0.6); }
+  @keyframes ptPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+</style>
+</helmet>
+
+<svg width="0" height="0" style="position: absolute; overflow: hidden" aria-hidden="true">
+  <symbol id="pt-mark" viewBox="0 0 24 24">
+    <g transform="translate(0,-0.45)" fill="none" stroke="currentColor" stroke-linecap="round">
+      <circle cx="12" cy="12" r="6.3" stroke-width="1.6"></circle>
+      <path d="M2.8 19.2 C 5.2 14.8 7.8 10.9 10.3 9.6 C 12.8 8.3 16.8 7.2 21.2 6.4" stroke-width="1.6"></path>
+    </g>
+  </symbol>
+  <symbol id="pt-mark-heavy" viewBox="0 0 24 24">
+    <g transform="translate(0,-0.45)" fill="none" stroke="currentColor" stroke-linecap="round">
+      <circle cx="12" cy="12" r="6.3" stroke-width="2.1"></circle>
+      <path d="M2.8 19.2 C 5.2 14.8 7.8 10.9 10.3 9.6 C 12.8 8.3 16.8 7.2 21.2 6.4" stroke-width="2.1"></path>
+    </g>
+  </symbol>
+  <symbol id="i-search" viewBox="0 0 16 16">
+    <g fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+      <circle cx="7" cy="7" r="4.2"></circle>
+      <path d="M10.2 10.2 L13.6 13.6"></path>
+    </g>
+  </symbol>
+  <symbol id="i-folder" viewBox="0 0 16 16">
+    <path d="M1.9 4.1 A1.2 1.2 0 0 1 3.1 2.9 H6 L7.4 4.5 H12.9 A1.2 1.2 0 0 1 14.1 5.7 V12 A1.2 1.2 0 0 1 12.9 13.2 H3.1 A1.2 1.2 0 0 1 1.9 12 Z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"></path>
+  </symbol>
+  <symbol id="i-gear" viewBox="0 0 16 16">
+    <g fill="none" stroke="currentColor" stroke-width="1.4">
+      <circle cx="8" cy="8" r="2.2"></circle>
+      <path d="M8 1.6 L8 3.2 M8 12.8 L8 14.4 M1.6 8 L3.2 8 M12.8 8 L14.4 8 M3.5 3.5 L4.6 4.6 M11.4 11.4 L12.5 12.5 M12.5 3.5 L11.4 4.6 M4.6 11.4 L3.5 12.5" stroke-linecap="round"></path>
+    </g>
+  </symbol>
+  <symbol id="i-copy" viewBox="0 0 16 16">
+    <g fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round">
+      <rect x="5.4" y="2.2" width="8.4" height="9.6" rx="1.6"></rect>
+      <path d="M10.6 13.8 H3.8 A1.6 1.6 0 0 1 2.2 12.2 V4.6"></path>
+    </g>
+  </symbol>
+  <symbol id="i-drag" viewBox="0 0 16 16">
+    <g fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round">
+      <path d="M9.4 2.2 H4.4 A1.5 1.5 0 0 0 2.9 3.7 V12.3 A1.5 1.5 0 0 0 4.4 13.8 H10.6 A1.5 1.5 0 0 0 12.1 12.3 V5"></path>
+      <path d="M8 10 L8 5.4 M6.1 7.3 L8 5.4 L9.9 7.3"></path>
+    </g>
+  </symbol>
+  <symbol id="i-chev" viewBox="0 0 16 16">
+    <path d="M4.6 6.6 L8 10 L11.4 6.6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></path>
+  </symbol>
+  <symbol id="i-arrow" viewBox="0 0 16 16">
+    <path d="M3 8 H12.4 M9.2 4.8 L12.4 8 L9.2 11.2" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path>
+  </symbol>
+  <symbol id="i-check" viewBox="0 0 16 16">
+    <path d="M3.4 8.4 L6.4 11.2 L12.6 4.8" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"></path>
+  </symbol>
+  <symbol id="i-term" viewBox="0 0 16 16">
+    <g fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="1.9" y="2.9" width="12.2" height="10.2" rx="1.6"></rect>
+      <path d="M4.8 6.4 L6.6 8.1 L4.8 9.8 M8.4 10 H11"></path>
+    </g>
+  </symbol>
+  <symbol id="i-app" viewBox="0 0 16 16">
+    <g fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round">
+      <rect x="2.2" y="2.2" width="11.6" height="11.6" rx="2.6"></rect>
+      <path d="M2.2 5.8 H13.8"></path>
+    </g>
+  </symbol>
+</svg>
+
+<section style="padding: 56px 56px 40px; display: flex; flex-direction: column; gap: 36px; font-family: -apple-system, 'SF Pro Text', system-ui, sans-serif">
+
+  <div style="display: flex; flex-direction: column; gap: 18px; max-width: 78ch">
+    <span style="font: 500 12px/1 ui-monospace, 'SF Mono', monospace; letter-spacing: 0.14em; text-transform: uppercase; color: #7E7A70">Patchthrough · round 12 · accent colour</span>
+    <h1 style="margin: 0; font: 600 42px/1.08 -apple-system, system-ui, sans-serif; letter-spacing: -0.028em; color: #F2F0EA">Red isn't just the delete colour — it's the <em style="font-style: normal; color: #E4633F">record</em> colour.</h1>
+    <p style="margin: 0; font: 400 17px/1.6 -apple-system, system-ui, sans-serif; color: #A29E93; text-wrap: pretty">Which is the bigger problem. In a recorder, red already has a job: <strong style="color: #D8D4CA; font-weight: 500">audio is being captured right now.</strong> That meaning is universal and worth keeping. Using the same red for the primary button spends it twice, so the one alarming colour in the app stops being alarming. Below: red keeps recording, and a second hue takes the interactive work. Each card shows all four accent jobs at once, with the record pill included so you can see them coexist.</p>
+  </div>
+
+  <div style="display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start">
+
+    <div id="12a" style="width: 300px; background: #1C1B17; border: 1px solid #35322A; border-radius: 10px; overflow: hidden">
+      <div style="padding: 16px 18px 14px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid #2C2A23">
+        <span style="width: 26px; height: 26px; border-radius: 6px; background: #106B63; flex: none"></span>
+        <div style="display: flex; flex-direction: column; gap: 3px">
+          <span style="font: 590 14px/1 -apple-system, system-ui, sans-serif; color: #F2F0EA">Patchbay teal</span>
+          <span style="font: 400 10.5px/1 ui-monospace, 'SF Mono', monospace; color: #6E6B60">#106B63 · #4FC7B8</span>
+        </div>
+      </div>
+      <div style="padding: 16px 18px 18px; display: flex; flex-direction: column; gap: 14px">
+        <span style="display: flex; align-items: center; justify-content: center; gap: 8px; background: #106B63; border-radius: 7px; padding: 10px 14px">
+          <svg viewBox="0 0 16 16" style="width: 14px; height: 14px; color: #F2FBF9; flex: none"><use href="#i-arrow" x="0" y="0" width="16" height="16"></use></svg>
+          <span style="font: 590 13px/1 -apple-system, system-ui, sans-serif; color: #F2FBF9">Patch through to claude</span>
+        </span>
+        <div style="display: flex; flex-direction: column; gap: 3px; padding: 9px; border-radius: 7px; background: rgba(79,199,184,0.14); border: 1px solid rgba(79,199,184,0.3)">
+          <span style="font: 590 13px/1 -apple-system, system-ui, sans-serif; color: #F2F0EA">9:45 PM</span>
+          <span style="font: 400 11.5px/1 -apple-system, system-ui, sans-serif; color: #C9C4B9">selected session</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 10px">
+          <span style="font: 600 10.5px/1 -apple-system, system-ui, sans-serif; letter-spacing: 0.09em; text-transform: uppercase; color: #4FC7B8">me</span>
+          <span style="font: 600 10.5px/1 -apple-system, system-ui, sans-serif; letter-spacing: 0.09em; text-transform: uppercase; color: #8C887E">them</span>
+          <span style="margin-left: auto; display: flex; align-items: center; gap: 6px; font: 400 10.5px/1 ui-monospace, 'SF Mono', monospace; color: #E4633F; background: rgba(210,55,27,0.14); border: 1px solid rgba(210,55,27,0.4); border-radius: 5px; padding: 5px 8px">
+            <span style="width: 6px; height: 6px; border-radius: 99px; background: #D2371B; animation: ptPulse 1.6s ease-in-out infinite"></span>1:04
+          </span>
+        </div>
+        <p style="margin: 0; font: 400 12.5px/1.5 -apple-system, system-ui, sans-serif; color: #A29E93; text-wrap: pretty">Studio-equipment colour, and the furthest hue from red — so recording never gets confused with a button. My pick.</p>
+      </div>
+    </div>
+
+    <div id="12b" style="width: 300px; background: #1C1B17; border: 1px solid #35322A; border-radius: 10px; overflow: hidden">
+      <div style="padding: 16px 18px 14px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid #2C2A23">
+        <span style="width: 26px; height: 26px; border-radius: 6px; background: #D9971F; flex: none"></span>
+        <div style="display: flex; flex-direction: column; gap: 3px">
+          <span style="font: 590 14px/1 -apple-system, system-ui, sans-serif; color: #F2F0EA">Signal amber</span>
+          <span style="font: 400 10.5px/1 ui-monospace, 'SF Mono', monospace; color: #6E6B60">#D9971F · #E8B34A</span>
+        </div>
+      </div>
+      <div style="padding: 16px 18px 18px; display: flex; flex-direction: column; gap: 14px">
+        <span style="display: flex; align-items: center; justify-content: center; gap: 8px; background: #D9971F; border-radius: 7px; padding: 10px 14px">
+          <svg viewBox="0 0 16 16" style="width: 14px; height: 14px; color: #241A06; flex: none"><use href="#i-arrow" x="0" y="0" width="16" height="16"></use></svg>
+          <span style="font: 590 13px/1 -apple-system, system-ui, sans-serif; color: #241A06">Patch through to claude</span>
+        </span>
+        <div style="display: flex; flex-direction: column; gap: 3px; padding: 9px; border-radius: 7px; background: rgba(232,179,74,0.13); border: 1px solid rgba(232,179,74,0.3)">
+          <span style="font: 590 13px/1 -apple-system, system-ui, sans-serif; color: #F2F0EA">9:45 PM</span>
+          <span style="font: 400 11.5px/1 -apple-system, system-ui, sans-serif; color: #C9C4B9">selected session</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 10px">
+          <span style="font: 600 10.5px/1 -apple-system, system-ui, sans-serif; letter-spacing: 0.09em; text-transform: uppercase; color: #E8B34A">me</span>
+          <span style="font: 600 10.5px/1 -apple-system, system-ui, sans-serif; letter-spacing: 0.09em; text-transform: uppercase; color: #8C887E">them</span>
+          <span style="margin-left: auto; display: flex; align-items: center; gap: 6px; font: 400 10.5px/1 ui-monospace, 'SF Mono', monospace; color: #E4633F; background: rgba(210,55,27,0.14); border: 1px solid rgba(210,55,27,0.4); border-radius: 5px; padding: 5px 8px">
+            <span style="width: 6px; height: 6px; border-radius: 99px; background: #D2371B; animation: ptPulse 1.6s ease-in-out infinite"></span>1:04
+          </span>
+        </div>
+        <p style="margin: 0; font: 400 12.5px/1.5 -apple-system, system-ui, sans-serif; color: #A29E93; text-wrap: pretty">Warmest match to the neutrals, and "signal present" on any meter. Risk: only 40° from the record red — see them together above.</p>
+      </div>
+    </div>
+
+    <div id="12c" style="width: 300px; background: #1C1B17; border: 1px solid #35322A; border-radius: 10px; overflow: hidden">
+      <div style="padding: 16px 18px 14px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid #2C2A23">
+        <span style="width: 26px; height: 26px; border-radius: 6px; background: #5B5BE8; flex: none"></span>
+        <div style="display: flex; flex-direction: column; gap: 3px">
+          <span style="font: 590 14px/1 -apple-system, system-ui, sans-serif; color: #F2F0EA">Indigo</span>
+          <span style="font: 400 10.5px/1 ui-monospace, 'SF Mono', monospace; color: #6E6B60">#5B5BE8 · #9A99F5</span>
+        </div>
+      </div>
+      <div style="padding: 16px 18px 18px; display: flex; flex-direction: column; gap: 14px">
+        <span style="display: flex; align-items: center; justify-content: center; gap: 8px; background: #5B5BE8; border-radius: 7px; padding: 10px 14px">
+          <svg viewBox="0 0 16 16" style="width: 14px; height: 14px; color: #F5F4FF; flex: none"><use href="#i-arrow" x="0" y="0" width="16" height="16"></use></svg>
+          <span style="font: 590 13px/1 -apple-system, system-ui, sans-serif; color: #F5F4FF">Patch through to claude</span>
+        </span>
+        <div style="display: flex; flex-direction: column; gap: 3px; padding: 9px; border-radius: 7px; background: rgba(154,153,245,0.14); border: 1px solid rgba(154,153,245,0.32)">
+          <span style="font: 590 13px/1 -apple-system, system-ui, sans-serif; color: #F2F0EA">9:45 PM</span>
+          <span style="font: 400 11.5px/1 -apple-system, system-ui, sans-serif; color: #C9C4B9">selected session</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 10px">
+          <span style="font: 600 10.5px/1 -apple-system, system-ui, sans-serif; letter-spacing: 0.09em; text-transform: uppercase; color: #9A99F5">me</span>
+          <span style="font: 600 10.5px/1 -apple-system, system-ui, sans-serif; letter-spacing: 0.09em; text-transform: uppercase; color: #8C887E">them</span>
+          <span style="margin-left: auto; display: flex; align-items: center; gap: 6px; font: 400 10.5px/1 ui-monospace, 'SF Mono', monospace; color: #E4633F; background: rgba(210,55,27,0.14); border: 1px solid rgba(210,55,27,0.4); border-radius: 5px; padding: 5px 8px">
+            <span style="width: 6px; height: 6px; border-radius: 99px; background: #D2371B; animation: ptPulse 1.6s ease-in-out infinite"></span>1:04
+          </span>
+        </div>
+        <p style="margin: 0; font: 400 12.5px/1.5 -apple-system, system-ui, sans-serif; color: #A29E93; text-wrap: pretty">Zero semantic baggage and safe on any ground. Also the most generic — this is where most dev tools already live.</p>
+      </div>
+    </div>
+
+    <div id="12d" style="width: 300px; background: #1C1B17; border: 1px solid #35322A; border-radius: 10px; overflow: hidden">
+      <div style="padding: 16px 18px 14px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid #2C2A23">
+        <span style="width: 26px; height: 26px; border-radius: 6px; background: #9DBE33; flex: none"></span>
+        <div style="display: flex; flex-direction: column; gap: 3px">
+          <span style="font: 590 14px/1 -apple-system, system-ui, sans-serif; color: #F2F0EA">Oscilloscope</span>
+          <span style="font: 400 10.5px/1 ui-monospace, 'SF Mono', monospace; color: #6E6B60">#9DBE33 · #BCD75F</span>
+        </div>
+      </div>
+      <div style="padding: 16px 18px 18px; display: flex; flex-direction: column; gap: 14px">
+        <span style="display: flex; align-items: center; justify-content: center; gap: 8px; background: #9DBE33; border-radius: 7px; padding: 10px 14px">
+          <svg viewBox="0 0 16 16" style="width: 14px; height: 14px; color: #16180C; flex: none"><use href="#i-arrow" x="0" y="0" width="16" height="16"></use></svg>
+          <span style="font: 590 13px/1 -apple-system, system-ui, sans-serif; color: #16180C">Patch through to claude</span>
+        </span>
+        <div style="display: flex; flex-direction: column; gap: 3px; padding: 9px; border-radius: 7px; background: rgba(188,215,95,0.12); border: 1px solid rgba(188,215,95,0.3)">
+          <span style="font: 590 13px/1 -apple-system, system-ui, sans-serif; color: #F2F0EA">9:45 PM</span>
+          <span style="font: 400 11.5px/1 -apple-system, system-ui, sans-serif; color: #C9C4B9">selected session</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 10px">
+          <span style="font: 600 10.5px/1 -apple-system, system-ui, sans-serif; letter-spacing: 0.09em; text-transform: uppercase; color: #BCD75F">me</span>
+          <span style="font: 600 10.5px/1 -apple-system, system-ui, sans-serif; letter-spacing: 0.09em; text-transform: uppercase; color: #8C887E">them</span>
+          <span style="margin-left: auto; display: flex; align-items: center; gap: 6px; font: 400 10.5px/1 ui-monospace, 'SF Mono', monospace; color: #E4633F; background: rgba(210,55,27,0.14); border: 1px solid rgba(210,55,27,0.4); border-radius: 5px; padding: 5px 8px">
+            <span style="width: 6px; height: 6px; border-radius: 99px; background: #D2371B; animation: ptPulse 1.6s ease-in-out infinite"></span>1:04
+          </span>
+        </div>
+        <p style="margin: 0; font: 400 12.5px/1.5 -apple-system, system-ui, sans-serif; color: #A29E93; text-wrap: pretty">Test-gear green, loud and memorable. Runs closest to a "success" read, so a completed patch would need a different signal.</p>
+      </div>
+    </div>
+
+  </div>
+
+  <div id="12e" style="display: flex; flex-direction: column; gap: 14px; padding-top: 8px">
+    <div style="display: flex; align-items: center; gap: 11px">
+      <span style="font: 500 11px/1 ui-monospace, 'SF Mono', monospace; letter-spacing: 0.1em; color: #F2F0EA; border: 1px solid #4A473E; padding: 6px 8px; border-radius: 3px">12e</span>
+      <h3 style="margin: 0; font: 600 20px/1 -apple-system, system-ui, sans-serif; letter-spacing: -0.02em; color: #F2F0EA">Teal in place</h3>
+      <span style="font: 400 13px/1 -apple-system, system-ui, sans-serif; color: #7E7A70">— 11a with the accent split off red</span>
+    </div>
+
+    <div style="width: 100%; max-width: 940px; border-radius: 11px; overflow: hidden; background: #1C1B17; border: 1px solid #35322A; box-shadow: 0 26px 60px rgba(0,0,0,0.55)">
+      <div style="height: 52px; background: #201F1A; border-bottom: 1px solid #2C2A23; display: flex; align-items: center; padding: 0 14px; gap: 14px">
+        <div style="display: flex; gap: 8px">
+          <span style="width: 12px; height: 12px; border-radius: 99px; background: #FF5F57"></span>
+          <span style="width: 12px; height: 12px; border-radius: 99px; background: #FEBC2E"></span>
+          <span style="width: 12px; height: 12px; border-radius: 99px; background: #28C840"></span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 9px; margin-left: 8px">
+          <svg viewBox="0 0 24 24" style="width: 17px; height: 17px; color: #F2F0EA"><use href="#pt-mark" x="0" y="0" width="24" height="24"></use></svg>
+          <span style="font: 590 13px/1 -apple-system, system-ui, sans-serif; color: #F2F0EA">Patchthrough</span>
+        </div>
+        <div style="margin-left: auto; display: flex; align-items: center; gap: 8px; min-width: 0">
+          <span style="display: flex; align-items: center; gap: 7px; background: #24231D; border: 1px solid #3A3730; border-radius: 7px; padding: 8px 11px; flex: none">
+            <svg viewBox="0 0 16 16" style="width: 13px; height: 13px; color: #A29E93"><use href="#i-drag" x="0" y="0" width="16" height="16"></use></svg>
+            <span style="font: 500 12px/1 -apple-system, system-ui, sans-serif; color: #D8D4CA">Drag</span>
+          </span>
+          <div style="display: flex; align-items: stretch; border-radius: 7px; overflow: hidden; flex: none">
+            <span style="display: flex; align-items: center; gap: 8px; background: #106B63; padding: 9px 14px; white-space: nowrap">
+              <svg viewBox="0 0 16 16" style="width: 14px; height: 14px; color: #F2FBF9; flex: none"><use href="#i-arrow" x="0" y="0" width="16" height="16"></use></svg>
+              <span style="font: 590 13px/1 -apple-system, system-ui, sans-serif; color: #F2FBF9">Patch through to claude</span>
+            </span>
+            <span style="display: grid; place-items: center; background: #0B534D; padding: 0 9px; border-left: 1px solid rgba(242,251,249,0.22)">
+              <svg viewBox="0 0 16 16" style="width: 13px; height: 13px; color: #F2FBF9"><use href="#i-chev" x="0" y="0" width="16" height="16"></use></svg>
+            </span>
+          </div>
+          <span style="width: 26px; height: 24px; border-radius: 5px; display: grid; place-items: center; color: #A29E93"><svg viewBox="0 0 16 16" style="width: 15px; height: 15px"><use href="#i-gear" x="0" y="0" width="16" height="16"></use></svg></span>
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 252px 1fr; height: 560px">
+        <div style="background: #191813; border-right: 1px solid #2C2A23; display: flex; flex-direction: column">
+          <div style="padding: 12px 12px 10px">
+            <div style="display: flex; align-items: center; gap: 7px; background: #24231D; border: 1px solid #302E27; border-radius: 6px; padding: 6px 9px">
+              <svg viewBox="0 0 16 16" style="width: 13px; height: 13px; color: #6E6B60"><use href="#i-search" x="0" y="0" width="16" height="16"></use></svg>
+              <span style="font: 400 12.5px/1 -apple-system, system-ui, sans-serif; color: #6E6B60">Search transcripts</span>
+            </div>
+          </div>
+          <div style="padding: 4px 8px 0; display: flex; flex-direction: column; gap: 3px">
+            <span style="font: 590 11px/1 -apple-system, system-ui, sans-serif; letter-spacing: 0.04em; text-transform: uppercase; color: #6E6B60; padding: 8px 8px 6px">Yesterday</span>
+            <div style="display: flex; flex-direction: column; gap: 3px; padding: 9px; border-radius: 7px; background: rgba(79,199,184,0.14); border: 1px solid rgba(79,199,184,0.3)">
+              <div style="display: flex; align-items: baseline; gap: 7px">
+                <span style="font: 590 13px/1 -apple-system, system-ui, sans-serif; color: #F2F0EA">9:45 PM</span>
+                <span style="font: 400 11px/1 ui-monospace, 'SF Mono', monospace; color: #7FB8AF">0m42s</span>
+              </div>
+              <span style="font: 400 12px/1.35 -apple-system, system-ui, sans-serif; color: #C9C4B9; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 202px">the main thing I wanted to cover is the recording lag</span>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 3px; padding: 9px; border-radius: 7px; border: 1px solid transparent">
+              <div style="display: flex; align-items: baseline; gap: 7px">
+                <span style="font: 500 13px/1 -apple-system, system-ui, sans-serif; color: #D8D4CA">8:13 PM</span>
+                <span style="font: 400 11px/1 ui-monospace, 'SF Mono', monospace; color: #6E6B60">0m10s</span>
+              </div>
+              <span style="font: 400 12px/1.35 -apple-system, system-ui, sans-serif; color: #7E7A70; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 202px">quick check on the notarize step</span>
+            </div>
+          </div>
+          <div style="margin-top: auto; padding: 12px 14px; border-top: 1px solid #24231D; display: flex; align-items: center; gap: 7px">
+            <svg viewBox="0 0 16 16" style="width: 13px; height: 13px; color: #4A473E"><use href="#i-folder" x="0" y="0" width="16" height="16"></use></svg>
+            <span style="font: 400 11px/1 ui-monospace, 'SF Mono', monospace; color: #6E6B60">~/Recordings</span>
+          </div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; min-width: 0">
+          <div style="display: flex; align-items: baseline; gap: 12px; padding: 14px 22px 12px; border-bottom: 1px solid #2C2A23">
+            <span style="font: 400 13px/1 ui-monospace, 'SF Mono', monospace; color: #F2F0EA">2026.07.30-2145</span>
+            <span style="font: 400 11.5px/1 -apple-system, system-ui, sans-serif; color: #7E7A70">0m42s · 118 words · 7 segments</span>
+            <span style="margin-left: auto; display: flex; align-items: center; gap: 7px">
+              <svg viewBox="0 0 16 16" style="width: 12px; height: 12px; color: #6E6B60"><use href="#i-folder" x="0" y="0" width="16" height="16"></use></svg>
+              <span style="font: 400 11.5px/1 ui-monospace, 'SF Mono', monospace; color: #8C887E">patchthrough</span>
+            </span>
+          </div>
+
+          <div style="flex: 1; overflow: hidden; padding: 22px 22px 0; display: flex; flex-direction: column; gap: 22px">
+            <div style="align-self: flex-end; display: flex; flex-direction: column; gap: 7px; max-width: 78%; align-items: flex-end">
+              <div style="display: flex; align-items: center; gap: 8px">
+                <span style="font: 400 10.5px/1 ui-monospace, 'SF Mono', monospace; color: #57544C">0:00</span>
+                <span style="font: 600 10.5px/1 -apple-system, system-ui, sans-serif; letter-spacing: 0.09em; text-transform: uppercase; color: #4FC7B8">me</span>
+              </div>
+              <div style="background: #1B211F; border-radius: 11px; padding: 13px 16px">
+                <span style="font: 400 14.5px/1.62 -apple-system, system-ui, sans-serif; color: #F2F0EA; text-wrap: pretty">Okay so the main thing I wanted to cover is the recording lag, right now when you hit start there's about half a second before the microphone actually captures anything, so we lose the first few words every single time.</span>
+              </div>
+            </div>
+            <div style="align-self: flex-start; display: flex; flex-direction: column; gap: 8px; max-width: 78%">
+              <div style="display: flex; align-items: center; gap: 8px">
+                <span style="font: 600 10.5px/1 -apple-system, system-ui, sans-serif; letter-spacing: 0.09em; text-transform: uppercase; color: #8C887E">them</span>
+                <span style="font: 400 10.5px/1 ui-monospace, 'SF Mono', monospace; color: #57544C">0:00</span>
+              </div>
+              <span style="font: 400 14.5px/1.62 -apple-system, system-ui, sans-serif; color: #D8D4CA; text-wrap: pretty">That makes sense.</span>
+              <span style="font: 400 14.5px/1.62 -apple-system, system-ui, sans-serif; color: #D8D4CA; text-wrap: pretty">One constraint though, we can't hold the microphone open all the time because the orange indicator would stay lit and people will think we're always listening.</span>
+            </div>
+            <div style="align-self: flex-end; display: flex; flex-direction: column; gap: 7px; max-width: 78%; align-items: flex-end">
+              <div style="display: flex; align-items: center; gap: 8px">
+                <span style="font: 400 10.5px/1 ui-monospace, 'SF Mono', monospace; color: #57544C">0:22</span>
+                <span style="font: 600 10.5px/1 -apple-system, system-ui, sans-serif; letter-spacing: 0.09em; text-transform: uppercase; color: #4FC7B8">me</span>
+              </div>
+              <div style="background: #1B211F; border-radius: 11px; padding: 13px 16px">
+                <span style="font: 400 14.5px/1.62 -apple-system, system-ui, sans-serif; color: #F2F0EA; text-wrap: pretty">Agreed. I'll pre-warm on menu open and leave the tap alone.</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="display: flex; flex-wrap: wrap; gap: 40px; padding-top: 20px; border-top: 1px solid #2C2A23">
+    <div style="display: flex; flex-direction: column; gap: 8px; width: 340px">
+      <span style="font: 590 10.5px/1 -apple-system, system-ui, sans-serif; letter-spacing: 0.09em; text-transform: uppercase; color: #7E7A70">The split, stated</span>
+      <p style="margin: 0; font: 400 13.5px/1.55 -apple-system, system-ui, sans-serif; color: #A29E93; text-wrap: pretty"><strong style="color: #4FC7B8; font-weight: 500">Accent</strong> — primary button, selection, <span style="color: #4FC7B8">me</span> tag, focus rings. <strong style="color: #E4633F; font-weight: 500">Red</strong> — recording only, plus genuine destructive confirmations (delete a session). Two colours, two jobs, no overlap. That also frees red to behave like a real warning, which it can't do today.</p>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 8px; width: 340px">
+      <span style="font: 590 10.5px/1 -apple-system, system-ui, sans-serif; letter-spacing: 0.09em; text-transform: uppercase; color: #7E7A70">What about the dock icon?</span>
+      <p style="margin: 0; font: 400 13.5px/1.55 -apple-system, system-ui, sans-serif; color: #A29E93; text-wrap: pretty">I'd keep it Signal red. A red icon on a recorder is on-brand and highly findable, and the icon lives outside the app where there's no button to confuse it with. If you'd rather have brand and UI match exactly, say so and I'll render the icon in the chosen accent too — the appiconset regenerates in one pass.</p>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 8px; width: 300px">
+      <span style="font: 590 10.5px/1 -apple-system, system-ui, sans-serif; letter-spacing: 0.09em; text-transform: uppercase; color: #7E7A70">Next</span>
+      <p style="margin: 0; font: 400 13.5px/1.55 -apple-system, system-ui, sans-serif; color: #A29E93; text-wrap: pretty">Name one — <a href="#12a">12a</a>, <a href="#12b">12b</a>, <a href="#12c">12c</a>, <a href="#12d">12d</a> — and I'll roll it through the window, settings and menu bar, then update the handoff palette.</p>
+    </div>
+  </div>
+
+</section>
+
+<section style="padding: 56px 56px 40px; display: flex; flex-direction: column; gap: 36px; font-family: -apple-system, 'SF Pro Text', system-ui, sans-serif">
+
+  <div style="display: flex; flex-direction: column; gap: 18px; max-width: 76ch">
+    <span style="font: 500 12px/1 ui-monospace, 'SF Mono', monospace; letter-spacing: 0.14em; text-transform: uppercase; color: #7E7A70">Patchthrough · round 11 · resolved</span>
+    <h1 style="margin: 0; font: 600 42px/1.08 -apple-system, system-ui, sans-serif; letter-spacing: -0.028em; color: #F2F0EA">10b's layout, 10c's typography, sides instead of rules.</h1>
+    <p style="margin: 0; font: 400 17px/1.6 -apple-system, system-ui, sans-serif; color: #A29E93; text-wrap: pretty">Left-edge bars are gone everywhere — in this section and retroactively in rounds 10a–10c. Selection is now a filled row, and speakers are told apart by <strong style="color: #D8D4CA; font-weight: 500">which side they sit on</strong>, which is what the rules were badly standing in for. The verb is <strong style="color: #D8D4CA; font-weight: 500">Patch through to</strong> throughout, in the window and the menu bar.</p>
+  </div>
+
+  <div id="11a" style="display: flex; gap: 24px; align-items: flex-start; flex-wrap: wrap">
+
+    <div style="width: 100%; max-width: 940px; border-radius: 11px; overflow: hidden; background: #1C1B17; border: 1px solid #35322A; box-shadow: 0 26px 60px rgba(0,0,0,0.55)">
+      <div style="height: 52px; background: #201F1A; border-bottom: 1px solid #2C2A23; display: flex; align-items: center; padding: 0 14px; gap: 14px">
+        <div style="display: flex; gap: 8px">
+          <span style="width: 12px; height: 12px; border-radius: 99px; background: #FF5F57"></span>
+          <span style="width: 12px; height: 12px; border-radius: 99px; background: #FEBC2E"></span>
+          <span style="width: 12px; height: 12px; border-radius: 99px; background: #28C840"></span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 9px; margin-left: 8px">
+          <svg viewBox="0 0 24 24" style="width: 17px; height: 17px; color: #F2F0EA"><use href="#pt-mark" x="0" y="0" width="24" height="24"></use></svg>
+          <span style="font: 590 13px/1 -apple-system, system-ui, sans-serif; color: #F2F0EA">Patchthrough</span>
+        </div>
+        <div style="margin-left: auto; display: flex; align-items: center; gap: 8px; min-width: 0">
+          <span style="display: flex; align-items: center; gap: 7px; background: #24231D; border: 1px solid #3A3730; border-radius: 7px; padding: 8px 11px; flex: none">
+            <svg viewBox="0 0 16 16" style="width: 13px; height: 13px; color: #A29E93"><use href="#i-drag" x="0" y="0" width="16" height="16"></use></svg>
+            <span style="font: 500 12px/1 -apple-system, system-ui, sans-serif; color: #D8D4CA">Drag</span>
+          </span>
+          <div style="display: flex; align-items: stretch; border-radius: 7px; overflow: hidden">
+            <span style="display: flex; align-items: center; gap: 8px; background: #D2371B; padding: 9px 14px; white-space: nowrap">
+              <svg viewBox="0 0 16 16" style="width: 14px; height: 14px; color: #FFF9F4; flex: none"><use href="#i-arrow" x="0" y="0" width="16" height="16"></use></svg>
+              <span style="font: 590 13px/1 -apple-system, system-ui, sans-serif; color: #FFF9F4">Patch through to claude</span>
+            </span>
+            <span style="display: grid; place-items: center; background: #B72E14; padding: 0 9px; border-left: 1px solid rgba(255,249,244,0.22)">
+              <svg viewBox="0 0 16 16" style="width: 13px; height: 13px; color: #FFF9F4"><use href="#i-chev" x="0" y="0" width="16" height="16"></use></svg>
+            </span>
+          </div>
+          <span style="width: 26px; height: 24px; border-radius: 5px; display: grid; place-items: center; color: #A29E93"><svg viewBox="0 0 16 16" style="width: 15px; height: 15px"><use href="#i-gear" x="0" y="0" width="16" height="16"></use></svg></span>
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 252px 1fr; height: 668px">
+        <div style="background: #191813; border-right: 1px solid #2C2A23; display: flex; flex-direction: column">
+          <div style="padding: 12px 12px 10px">
+            <div style="display: flex; align-items: center; gap: 7px; background: #24231D; border: 1px solid #302E27; border-radius: 6px; padding: 6px 9px">
+              <svg viewBox="0 0 16 16" style="width: 13px; height: 13px; color: #6E6B60"><use href="#i-search" x="0" y="0" width="16" height="16"></use></svg>
+              <span style="font: 400 12.5px/1 -apple-system, system-ui, sans-serif; color: #6E6B60">Search transcripts</span>
+            </div>
+          </div>
+          <div style="padding: 4px 8px 0; display: flex; flex-direction: column; gap: 3px">
+            <span style="font: 590 11px/1 -apple-system, system-ui, sans-serif; letter-spacing: 0.04em; text-transform: uppercase; color: #6E6B60; padding: 8px 8px 6px">Yesterday</span>
+            <div style="display: flex; flex-direction: column; gap: 3px; padding: 9px; border-radius: 7px; background: rgba(210,55,27,0.15); border: 1px solid rgba(210,55,27,0.32)">
+              <div style="display: flex; align-items: baseline; gap: 7px">
+                <span style="font: 590 13px/1 -apple-system, system-ui, sans-serif; color: #F2F0EA">9:45 PM</span>
+                <span style="font: 400 11px/1 ui-monospace, 'SF Mono', monospace; color: #C08A78">0m42s</span>
+              </div>
+              <span style="font: 400 12px/1.35 -apple-system, system-ui, sans-serif; color: #C9C4B9; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 202px">the main thing I wanted to cover is the recording lag</span>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 3px; padding: 9px; border-radius: 7px; border: 1px solid transparent">
+              <div style="display: flex; align-items: baseline; gap: 7px">
+                <span style="font: 500 13px/1 -apple-system, system-ui, sans-serif; color: #D8D4CA">8:13 PM</span>
+                <span style="font: 400 11px/1 ui-monospace, 'SF Mono', monospace; color: #6E6B60">0m10s</span>
+              </div>
+              <span style="font: 400 12px/1.35 -apple-system, system-ui, sans-serif; color: #7E7A70; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 202px">quick check on the notarize step</span>
+            </div>
+          </div>
+          <div style="margin-top: auto; padding: 12px 14px; border-top: 1px solid #24231D; display: flex; align-items: center; gap: 7px">
+            <svg viewBox="0 0 16 16" style="width: 13px; height: 13px; color: #4A473E"><use href="#i-folder" x="0" y="0" width="16" height="16"></use></svg>
+            <span style="font: 400 11px/1 ui-monospace, 'SF Mono', monospace; color: #6E6B60">~/Recordings</span>
+          </div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; min-width: 0">
+          <div style="display: flex; align-items: baseline; gap: 12px; padding: 14px 22px 12px; border-bottom: 1px solid #2C2A23">
+            <span style="font: 400 13px/1 ui-monospace, 'SF Mono', monospace; color: #F2F0EA">2026.07.30-2145</span>
+            <span style="font: 400 11.5px/1 -apple-system, system-ui, sans-serif; color: #7E7A70">0m42s · 118 words · 7 segments</span>
+            <span style="margin-left: auto; display: flex; align-items: center; gap: 7px">
+              <svg viewBox="0 0 16 16" style="width: 12px; height: 12px; color: #6E6B60"><use href="#i-folder" x="0" y="0" width="16" height="16"></use></svg>
+              <span style="font: 400 11.5px/1 ui-monospace, 'SF Mono', monospace; color: #8C887E">patchthrough</span>
+            </span>
+          </div>
+
+          <div style="flex: 1; overflow: hidden; padding: 22px 22px 0; display: flex; flex-direction: column; gap: 22px">
+
+            <div style="align-self: flex-end; display: flex; flex-direction: column; gap: 7px; max-width: 78%; align-items: flex-end">
+              <div style="display: flex; align-items: center; gap: 8px">
+                <span style="font: 400 10.5px/1 ui-monospace, 'SF Mono', monospace; color: #57544C">0:00</span>
+                <span style="font: 600 10.5px/1 -apple-system, system-ui, sans-serif; letter-spacing: 0.09em; text-transform: uppercase; color: #E4633F">me</span>
+              </div>
+              <div style="background: #211E1A; border-radius: 11px; padding: 13px 16px">
+                <span style="font: 400 14.5px/1.62 -apple-system, system-ui, sans-serif; color: #F2F0EA; text-wrap: pretty">Okay so the main thing I wanted to cover is the recording lag, right now when you hit start there's about half a second before the microphone actually captures anything, so we lose the first few words every single time, I think we should pre-warm the audio engine when the menu opens instead of when the user clicks record.</span>
+              </div>
+            </div>
+
+            <div style="align-self: flex-start; display: flex; flex-direction: column; gap: 8px; max-width: 78%">
+              <div style="display: flex; align-items: center; gap: 8px">
+                <span style="font: 600 10.5px/1 -apple-system, system-ui, sans-serif; letter-spacing: 0.09em; text-transform: uppercase; color: #8C887E">them</span>
+                <span style="font: 400 10.5px/1 ui-monospace, 'SF Mono', monospace; color: #57544C">0:00</span>
+              </div>
+              <span style="font: 400 14.5px/1.62 -apple-system, system-ui, sans-serif; color: #D8D4CA; text-wrap: pretty">That makes sense.</span>
+              <span style="font: 400 14.5px/1.62 -apple-system, system-ui, sans-serif; color: #D8D4CA; text-wrap: pretty">One constraint though, we can't hold the microphone open all the time because the orange indicator would stay lit and people will think we're always listening.</span>
+            </div>
+
+            <div style="align-self: flex-start; display: flex; flex-direction: column; gap: 8px; max-width: 78%">
+              <div style="display: flex; align-items: center; gap: 8px">
+                <span style="font: 600 10.5px/1 -apple-system, system-ui, sans-serif; letter-spacing: 0.09em; text-transform: uppercase; color: #8C887E">them</span>
+                <span style="font: 400 10.5px/1 ui-monospace, 'SF Mono', monospace; color: #57544C">0:10</span>
+              </div>
+              <span style="font: 400 14.5px/1.62 -apple-system, system-ui, sans-serif; color: #D8D4CA; text-wrap: pretty">Also can you make sure the transcript failure path doesn't write an empty file? I saw that bite someone last week.</span>
+              <span style="font: 400 14.5px/1.62 -apple-system, system-ui, sans-serif; color: #D8D4CA; text-wrap: pretty">And let's not touch the dependency pinning. That's settled.</span>
+            </div>
+
+            <div style="align-self: flex-end; display: flex; flex-direction: column; gap: 7px; max-width: 78%; align-items: flex-end">
+              <div style="display: flex; align-items: center; gap: 8px">
+                <span style="font: 400 10.5px/1 ui-monospace, 'SF Mono', monospace; color: #57544C">0:22</span>
+                <span style="font: 600 10.5px/1 -apple-system, system-ui, sans-serif; letter-spacing: 0.09em; text-transform: uppercase; color: #E4633F">me</span>
+              </div>
+              <div style="background: #211E1A; border-radius: 11px; padding: 13px 16px">
+                <span style="font: 400 14.5px/1.62 -apple-system, system-ui, sans-serif; color: #F2F0EA; text-wrap: pretty">Agreed on the pinning. I'll pre-warm on menu open and leave the tap alone.</span>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 20px; width: 300px">
+      <div style="display: flex; flex-direction: column; gap: 10px">
+        <span style="font: 590 10.5px/1 -apple-system, system-ui, sans-serif; letter-spacing: 0.09em; text-transform: uppercase; color: #7E7A70">The split button's menu</span>
+        <div style="background: #24231D; border: 1px solid #454138; border-radius: 9px; box-shadow: 0 18px 40px rgba(0,0,0,0.6); padding: 6px; display: flex; flex-direction: column; gap: 1px">
+          <span style="font: 590 10px/1 -apple-system, system-ui, sans-serif; letter-spacing: 0.08em; text-transform: uppercase; color: #6E6B60; padding: 8px 10px 6px">Most used</span>
+          <div style="display: flex; align-items: center; gap: 9px; padding: 8px 10px; border-radius: 5px; background: rgba(210,55,27,0.16)">
+            <svg viewBox="0 0 16 16" style="width: 14px; height: 14px; color: #E4633F; flex: none"><use href="#i-term" x="0" y="0" width="16" height="16"></use></svg>
+            <span style="font: 500 12.5px/1 -apple-system, system-ui, sans-serif; color: #F2F0EA">claude</span>
+            <span style="margin-left: auto; font: 400 10.5px/1 ui-monospace, 'SF Mono', monospace; color: #A2705F">14×</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 9px; padding: 8px 10px; border-radius: 5px">
+            <svg viewBox="0 0 16 16" style="width: 14px; height: 14px; color: #8C887E; flex: none"><use href="#i-app" x="0" y="0" width="16" height="16"></use></svg>
+            <span style="font: 400 12.5px/1 -apple-system, system-ui, sans-serif; color: #D8D4CA">Claude app</span>
+            <span style="margin-left: auto; font: 400 10.5px/1 ui-monospace, 'SF Mono', monospace; color: #6E6B60">5×</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 9px; padding: 8px 10px; border-radius: 5px">
+            <svg viewBox="0 0 16 16" style="width: 14px; height: 14px; color: #8C887E; flex: none"><use href="#i-term" x="0" y="0" width="16" height="16"></use></svg>
+            <span style="font: 400 12.5px/1 -apple-system, system-ui, sans-serif; color: #D8D4CA">opencode</span>
+            <span style="margin-left: auto; font: 400 10.5px/1 ui-monospace, 'SF Mono', monospace; color: #6E6B60">2×</span>
+          </div>
+          <span style="height: 1px; background: #35322A; margin: 5px 8px"></span>
+          <span style="font: 590 10px/1 -apple-system, system-ui, sans-serif; letter-spacing: 0.08em; text-transform: uppercase; color: #6E6B60; padding: 6px 10px 6px">Terminal</span>
+          <div style="display: flex; align-items: center; gap: 9px; padding: 7px 10px; border-radius: 5px">
+            <svg viewBox="0 0 16 16" style="width: 14px; height: 14px; color: #8C887E; flex: none"><use href="#i-term" x="0" y="0" width="16" height="16"></use></svg>
+            <span style="font: 400 12.5px/1 -apple-system, system-ui, sans-serif; color: #A29E93">cursor-agent</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 9px; padding: 7px 10px; border-radius: 5px">
+            <svg viewBox="0 0 16 16" style="width: 14px; height: 14px; color: #8C887E; flex: none"><use href="#i-term" x="0" y="0" width="16" height="16"></use></svg>
+            <span style="font: 400 12.5px/1 -apple-system, system-ui, sans-serif; color: #A29E93">kimi</span>
+          </div>
+          <span style="font: 590 10px/1 -apple-system, system-ui, sans-serif; letter-spacing: 0.08em; text-transform: uppercase; color: #6E6B60; padding: 8px 10px 6px">App</span>
+          <div style="display: flex; align-items: center; gap: 9px; padding: 7px 10px; border-radius: 5px">
+            <svg viewBox="0 0 16 16" style="width: 14px; height: 14px; color: #8C887E; flex: none"><use href="#i-app" x="0" y="0" width="16" height="16"></use></svg>
+            <span style="font: 400 12.5px/1 -apple-system, system-ui, sans-serif; color: #A29E93">Copilot — VS Code</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 9px; padding: 7px 10px; border-radius: 5px">
+            <svg viewBox="0 0 16 16" style="width: 14px; height: 14px; color: #8C887E; flex: none"><use href="#i-app" x="0" y="0" width="16" height="16"></use></svg>
+            <span style="font: 400 12.5px/1 -apple-system, system-ui, sans-serif; color: #A29E93">Claude Cowork</span>
+          </div>
+        </div>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 9px">
+        <span style="font: 590 10.5px/1 -apple-system, system-ui, sans-serif; letter-spacing: 0.09em; text-transform: uppercase; color: #7E7A70">Selection, before &amp; after</span>
+        <div style="background: #191813; border: 1px solid #2C2A23; border-radius: 8px; padding: 8px; display: flex; flex-direction: column; gap: 8px">
+          <div style="display: flex; flex-direction: column; gap: 3px; padding: 9px 9px 9px 7px; border-radius: 7px; background: rgba(210,55,27,0.13); border-left: 2px solid #D2371B; opacity: 0.5">
+            <span style="font: 590 13px/1 -apple-system, system-ui, sans-serif; color: #F2F0EA">9:45 PM</span>
+            <span style="font: 400 11.5px/1 -apple-system, system-ui, sans-serif; color: #A29E93">was: a bar on the edge</span>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 3px; padding: 9px; border-radius: 7px; background: rgba(210,55,27,0.15); border: 1px solid rgba(210,55,27,0.32)">
+            <span style="font: 590 13px/1 -apple-system, system-ui, sans-serif; color: #F2F0EA">9:45 PM</span>
+            <span style="font: 400 11.5px/1 -apple-system, system-ui, sans-serif; color: #C9C4B9">now: the whole row</span>
+          </div>
+        </div>
+        <span style="font: 400 11.5px/1.5 -apple-system, system-ui, sans-serif; color: #6E6B60; text-wrap: pretty">A filled row with a faint ring. Native <span style="font-family: ui-monospace, 'SF Mono', monospace; font-size: 11px; color: #8C887E">List</span> selection with <span style="font-family: ui-monospace, 'SF Mono', monospace; font-size: 11px; color: #8C887E">.tint(.accent)</span> gets you this for free.</span>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 8px">
+        <span style="font: 590 10.5px/1 -apple-system, system-ui, sans-serif; letter-spacing: 0.09em; text-transform: uppercase; color: #7E7A70">Why sides, not rules</span>
+        <p style="margin: 0; font: 400 13px/1.55 -apple-system, system-ui, sans-serif; color: #A29E93; text-wrap: pretty"><span style="color: #E4633F">me</span> right on a faint surface, <span style="color: #D8D4CA">them</span> left on bare background. Position does the work a coloured edge was doing badly, and the asymmetry means neither side needs an outline. Text stays left-aligned in both — right-aligned body copy is slower to read.</p>
+      </div>
+    </div>
+
+  </div>
+
+</section>
+
+<section style="padding: 56px 56px 72px; display: flex; flex-direction: column; gap: 40px; font-family: -apple-system, 'SF Pro Text', system-ui, sans-serif">
+
+  <div style="display: flex; flex-direction: column; gap: 18px; max-width: 78ch">
+    <span style="font: 500 12px/1 ui-monospace, 'SF Mono', monospace; letter-spacing: 0.14em; text-transform: uppercase; color: #7E7A70">Patchthrough · round 10 · app redesign</span>
+    <h1 style="margin: 0; font: 600 42px/1.08 -apple-system, system-ui, sans-serif; letter-spacing: -0.028em; color: #F2F0EA">The README promises one click. The window asks you to choose from ten.</h1>
+    <p style="margin: 0; font: 400 17px/1.6 -apple-system, system-ui, sans-serif; color: #A29E93; text-wrap: pretty">Three directions, all dark, all buildable in SwiftUI without custom drawing. They share four fixes: destinations <strong style="color: #D8D4CA; font-weight: 500">ranked by what you actually use</strong> instead of a flat grid of ten; <strong style="color: #D8D4CA; font-weight: 500">me/them as real turns</strong>, since two-track diarization is the one piece of structure the transcript has; sessions labelled by <strong style="color: #D8D4CA; font-weight: 500">what the meeting was about</strong>, not the clock; and Signal red earning its keep as the accent. They differ in where the handoff lives — and that's the actual decision.</p>
+    <div style="display: flex; gap: 10px; flex-wrap: wrap; padding-top: 4px">
+      <span style="font: 400 12px/1 ui-monospace, 'SF Mono', monospace; color: #7E7A70; border: 1px solid #302E27; border-radius: 4px; padding: 7px 10px">Refresh button dropped — the list already watches the folder</span>
+      <span style="font: 400 12px/1 ui-monospace, 'SF Mono', monospace; color: #7E7A70; border: 1px solid #302E27; border-radius: 4px; padding: 7px 10px">No Record button — recording starts in the menu bar</span>
+      <span style="font: 400 12px/1 ui-monospace, 'SF Mono', monospace; color: #7E7A70; border: 1px solid #302E27; border-radius: 4px; padding: 7px 10px">One accent: <span style="color: #E4633F">#D2371B</span></span>
+    </div>
+  </div>
+
+  <div style="display: flex; flex-wrap: wrap; gap: 28px; align-items: flex-start">
+
+    <div id="10a" style="display: flex; flex-direction: column; gap: 14px">
+      <div style="display: flex; align-items: center; gap: 11px">
+        <span style="font: 500 11px/1 ui-monospace, 'SF Mono', monospace; letter-spacing: 0.1em; color: #F2F0EA; border: 1px solid #4A473E; padding: 6px 8px; border-radius: 3px">10a</span>
+        <h3 style="margin: 0; font: 600 20px/1 -apple-system, system-ui, sans-serif; letter-spacing: -0.02em; color: #F2F0EA">Reviewer</h3>
+        <span style="font: 400 13px/1 -apple-system, system-ui, sans-serif; color: #7E7A70">— same bones, fixed hierarchy</span>
+      </div>
+      <p style="margin: 0; max-width: 58ch; font: 400 14px/1.55 -apple-system, system-ui, sans-serif; color: #A29E93; text-wrap: pretty">The safest change. Structure survives, but the footer stops being a wall: one primary destination, two runners-up, everything else behind a menu. Lowest build cost of the three.</p>
+
+      <div style="width: 940px; border-radius: 11px; overflow: hidden; background: #1C1B17; border: 1px solid #35322A; box-shadow: 0 26px 60px rgba(0,0,0,0.55)">
+        <div style="height: 46px; background: #201F1A; border-bottom: 1px solid #2C2A23; display: flex; align-items: center; padding: 0 14px; gap: 14px">
+          <div style="display: flex; gap: 8px">
+            <span style="width: 12px; height: 12px; border-radius: 99px; background: #FF5F57"></span>
+            <span style="width: 12px; height: 12px; border-radius: 99px; background: #FEBC2E"></span>
+            <span style="width: 12px; height: 12px; border-radius: 99px; background: #28C840"></span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 9px; margin-left: 8px">
+            <svg viewBox="0 0 24 24" style="width: 17px; height: 17px; color: #F2F0EA"><use href="#pt-mark" x="0" y="0" width="24" height="24"></use></svg>
+            <span style="font: 590 13px/1 -apple-system, system-ui, sans-serif; color: #F2F0EA">Patchthrough</span>
+          </div>
+          <div style="margin-left: auto; display: flex; align-items: center; gap: 6px">
+            <span style="display: flex; align-items: center; gap: 6px; font: 400 11px/1 ui-monospace, 'SF Mono', monospace; color: #7E7A70; border: 1px solid #302E27; border-radius: 5px; padding: 6px 9px">
+              <span style="width: 6px; height: 6px; border-radius: 99px; background: #4A473E"></span>idle
+            </span>
+            <span style="width: 1px; height: 18px; background: #2C2A23; margin: 0 4px"></span>
+            <span style="width: 26px; height: 24px; border-radius: 5px; display: grid; place-items: center; color: #A29E93"><svg viewBox="0 0 16 16" style="width: 15px; height: 15px"><use href="#i-copy" x="0" y="0" width="16" height="16"></use></svg></span>
+            <span style="width: 26px; height: 24px; border-radius: 5px; display: grid; place-items: center; color: #A29E93"><svg viewBox="0 0 16 16" style="width: 15px; height: 15px"><use href="#i-folder" x="0" y="0" width="16" height="16"></use></svg></span>
+            <span style="width: 26px; height: 24px; border-radius: 5px; display: grid; place-items: center; color: #A29E93"><svg viewBox="0 0 16 16" style="width: 15px; height: 15px"><use href="#i-gear" x="0" y="0" width="16" height="16"></use></svg></span>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 252px 1fr; height: 674px">
+          <div style="background: #191813; border-right: 1px solid #2C2A23; display: flex; flex-direction: column">
+            <div style="padding: 12px 12px 10px">
+              <div style="display: flex; align-items: center; gap: 7px; background: #24231D; border: 1px solid #302E27; border-radius: 6px; padding: 6px 9px">
+                <svg viewBox="0 0 16 16" style="width: 13px; height: 13px; color: #6E6B60"><use href="#i-search" x="0" y="0" width="16" height="16"></use></svg>
+                <span style="font: 400 12.5px/1 -apple-system, system-ui, sans-serif; color: #6E6B60">Search transcripts</span>
+              </div>
+            </div>
+            <div style="padding: 4px 8px 0; display: flex; flex-direction: column; gap: 2px">
+              <span style="font: 590 11px/1 -apple-system, system-ui, sans-serif; letter-spacing: 0.04em; text-transform: uppercase; color: #6E6B60; padding: 8px 8px 6px">Yesterday</span>
+              <div style="display: flex; gap: 9px; padding: 9px; border-radius: 7px; background: rgba(210,55,27,0.15); border: 1px solid rgba(210,55,27,0.32)">
+                <div style="display: flex; flex-direction: column; gap: 3px; min-width: 0">
+                  <div style="display: flex; align-items: baseline; gap: 7px">
+                    <span style="font: 590 13px/1 -apple-system, system-ui, sans-serif; color: #F2F0EA">9:45 PM</span>
+                    <span style="font: 400 11px/1 ui-monospace, 'SF Mono', monospace; color: #8C887E">0m42s</span>
+                  </div>
+                  <span style="font: 400 12px/1.35 -apple-system, system-ui, sans-serif; color: #A29E93; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 206px">the main thing I wanted to cover is the recording lag</span>
+                </div>
+              </div>
+              <div style="display: flex; gap: 9px; padding: 9px 9px 9px 9px; border-radius: 7px">
+                <div style="display: flex; flex-direction: column; gap: 3px; min-width: 0">
+                  <div style="display: flex; align-items: baseline; gap: 7px">
+                    <span style="font: 500 13px/1 -apple-system, system-ui, sans-serif; color: #D8D4CA">8:13 PM</span>
+                    <span style="font: 400 11px/1 ui-monospace, 'SF Mono', monospace; color: #6E6B60">0m10s</span>
+                  </div>
+                  <span style="font: 400 12px/1.35 -apple-system, system-ui, sans-serif; color: #7E7A70; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 206px">quick check on the notarize step</span>
+                </div>
+              </div>
+            </div>
+            <div style="margin-top: auto; padding: 12px 14px; border-top: 1px solid #24231D; display: flex; align-items: center; gap: 7px">
+              <svg viewBox="0 0 16 16" style="width: 13px; height: 13px; color: #4A473E"><use href="#i-folder" x="0" y="0" width="16" height="16"></use></svg>
+              <span style="font: 400 11px/1 ui-monospace, 'SF Mono', monospace; color: #6E6B60">~/Recordings</span>
+            </div>
+          </div>
+
+          <div style="display: flex; flex-direction: column; min-width: 0">
+            <div style="display: flex; align-items: center; gap: 12px; padding: 13px 16px; border-bottom: 1px solid #2C2A23">
+              <div style="display: flex; flex-direction: column; gap: 3px">
+                <span style="font: 400 13px/1 ui-monospace, 'SF Mono', monospace; color: #F2F0EA">2026.07.30-2145</span>
+                <span style="font: 400 11.5px/1 -apple-system, system-ui, sans-serif; color: #7E7A70">0m42s · 118 words · 7 segments · 2 tracks</span>
+              </div>
+              <div style="margin-left: auto; display: flex; align-items: center; gap: 7px; background: #24231D; border: 1px solid #3A3730; border-radius: 6px; padding: 7px 11px">
+                <svg viewBox="0 0 16 16" style="width: 13px; height: 13px; color: #A29E93"><use href="#i-drag" x="0" y="0" width="16" height="16"></use></svg>
+                <span style="font: 500 12px/1 -apple-system, system-ui, sans-serif; color: #D8D4CA">Drag into any chat</span>
+              </div>
+            </div>
+
+            <div style="flex: 1; overflow: hidden; padding: 16px 16px 8px; display: flex; flex-direction: column; gap: 3px">
+              <div style="display: flex; gap: 12px; padding: 9px 11px; border-radius: 7px; background: #24211D">
+                <span style="font: 400 11px/1.5 ui-monospace, 'SF Mono', monospace; color: #6E6B60; width: 30px; flex: none; padding-top: 1px">0:00</span>
+                <div style="display: flex; flex-direction: column; gap: 4px; min-width: 0">
+                  <span style="font: 600 10.5px/1 -apple-system, system-ui, sans-serif; letter-spacing: 0.08em; text-transform: uppercase; color: #E4633F">me</span>
+                  <span style="font: 400 13.5px/1.55 -apple-system, system-ui, sans-serif; color: #F2F0EA; text-wrap: pretty">Okay so the main thing I wanted to cover is the recording lag, right now when you hit start there's about half a second before the microphone actually captures anything, so we lose the first few words every single time, I think we should pre-warm the audio engine when the menu opens instead of when the user clicks record.</span>
+                </div>
+              </div>
+              <div style="display: flex; gap: 12px; padding: 9px 11px; border-radius: 7px">
+                <span style="font: 400 11px/1.5 ui-monospace, 'SF Mono', monospace; color: #6E6B60; width: 30px; flex: none; padding-top: 1px">0:00</span>
+                <div style="display: flex; flex-direction: column; gap: 4px; min-width: 0">
+                  <span style="font: 600 10.5px/1 -apple-system, system-ui, sans-serif; letter-spacing: 0.08em; text-transform: uppercase; color: #8C887E">them</span>
+                  <span style="font: 400 13.5px/1.55 -apple-system, system-ui, sans-serif; color: #D8D4CA; text-wrap: pretty">That makes sense.</span>
+                  <span style="font: 400 13.5px/1.55 -apple-system, system-ui, sans-serif; color: #D8D4CA; text-wrap: pretty">One constraint though, we can't hold the microphone open all the time because the orange indicator would stay lit and people will think we're always listening.</span>
+                </div>
+              </div>
+              <div style="display: flex; gap: 12px; padding: 9px 11px; border-radius: 7px">
+                <span style="font: 400 11px/1.5 ui-monospace, 'SF Mono', monospace; color: #6E6B60; width: 30px; flex: none; padding-top: 1px">0:10</span>
+                <div style="display: flex; flex-direction: column; gap: 4px; min-width: 0">
+                  <span style="font: 600 10.5px/1 -apple-system, system-ui, sans-serif; letter-spacing: 0.08em; text-transform: uppercase; color: #8C887E">them</span>
+                  <span style="font: 400 13.5px/1.55 -apple-system, system-ui, sans-serif; color: #D8D4CA; text-wrap: pretty">Also can you make sure the transcript failure path doesn't write an empty file? I saw that bite someone last week.</span>
+                  <span style="font: 400 13.5px/1.55 -apple-system, system-ui, sans-serif; color: #D8D4CA; text-wrap: pretty">And let's not touch the dependency pinning. That's settled.</span>
+                </div>
+              </div>
+            </div>
+
+            <div style="border-top: 1px solid #2C2A23; padding: 13px 16px 14px; display: flex; flex-direction: column; gap: 11px; background: #1E1D18">
+              <div style="display: flex; align-items: center; gap: 9px">
+                <svg viewBox="0 0 16 16" style="width: 13px; height: 13px; color: #6E6B60"><use href="#i-folder" x="0" y="0" width="16" height="16"></use></svg>
+                <span style="font: 400 12px/1 ui-monospace, 'SF Mono', monospace; color: #A29E93">patchthrough</span>
+                <span style="font: 400 11.5px/1 -apple-system, system-ui, sans-serif; color: #6E6B60">Change…</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 8px">
+                <span style="display: flex; align-items: center; gap: 8px; background: #D2371B; border-radius: 7px; padding: 10px 15px">
+                  <svg viewBox="0 0 16 16" style="width: 14px; height: 14px; color: #FFF9F4"><use href="#i-term" x="0" y="0" width="16" height="16"></use></svg>
+                  <span style="font: 590 13px/1 -apple-system, system-ui, sans-serif; color: #FFF9F4">Patch through to claude</span>
+                </span>
+                <span style="display: flex; align-items: center; gap: 7px; background: #26251F; border: 1px solid #3A3730; border-radius: 7px; padding: 10px 13px">
+                  <svg viewBox="0 0 16 16" style="width: 13px; height: 13px; color: #A29E93"><use href="#i-app" x="0" y="0" width="16" height="16"></use></svg>
+                  <span style="font: 500 12.5px/1 -apple-system, system-ui, sans-serif; color: #D8D4CA">Claude app</span>
+                </span>
+                <span style="display: flex; align-items: center; gap: 7px; background: #26251F; border: 1px solid #3A3730; border-radius: 7px; padding: 10px 13px">
+                  <svg viewBox="0 0 16 16" style="width: 13px; height: 13px; color: #A29E93"><use href="#i-term" x="0" y="0" width="16" height="16"></use></svg>
+                  <span style="font: 500 12.5px/1 -apple-system, system-ui, sans-serif; color: #D8D4CA">opencode</span>
+                </span>
+                <span style="display: flex; align-items: center; gap: 6px; border: 1px solid #302E27; border-radius: 7px; padding: 10px 12px">
+                  <span style="font: 500 12.5px/1 -apple-system, system-ui, sans-serif; color: #8C887E">7 more</span>
+                  <svg viewBox="0 0 16 16" style="width: 12px; height: 12px; color: #6E6B60"><use href="#i-chev" x="0" y="0" width="16" height="16"></use></svg>
+                </span>
+                <span style="margin-left: auto; font: 400 11px/1 -apple-system, system-ui, sans-serif; color: #57544C">ranked by your use</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="10b" style="display: flex; flex-direction: column; gap: 14px">
+      <div style="display: flex; align-items: center; gap: 11px">
+        <span style="font: 500 11px/1 ui-monospace, 'SF Mono', monospace; letter-spacing: 0.1em; color: #F2F0EA; border: 1px solid #4A473E; padding: 6px 8px; border-radius: 3px">10b</span>
+        <h3 style="margin: 0; font: 600 20px/1 -apple-system, system-ui, sans-serif; letter-spacing: -0.02em; color: #F2F0EA">One Door</h3>
+        <span style="font: 400 13px/1 -apple-system, system-ui, sans-serif; color: #7E7A70">— the footer is deleted</span>
+      </div>
+      <p style="margin: 0; max-width: 58ch; font: 400 14px/1.55 -apple-system, system-ui, sans-serif; color: #A29E93; text-wrap: pretty">If the handoff is one click, it's one button. A split button in the toolbar — primary action plus a menu for the other nine. The whole bottom third comes back as transcript, and the reading measure gets an actual limit.</p>
+
+      <div style="width: 940px; border-radius: 11px; overflow: hidden; background: #1C1B17; border: 1px solid #35322A; box-shadow: 0 26px 60px rgba(0,0,0,0.55)">
+        <div style="height: 52px; background: #201F1A; border-bottom: 1px solid #2C2A23; display: flex; align-items: center; padding: 0 14px; gap: 14px">
+          <div style="display: flex; gap: 8px">
+            <span style="width: 12px; height: 12px; border-radius: 99px; background: #FF5F57"></span>
+            <span style="width: 12px; height: 12px; border-radius: 99px; background: #FEBC2E"></span>
+            <span style="width: 12px; height: 12px; border-radius: 99px; background: #28C840"></span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 9px; margin-left: 8px">
+            <svg viewBox="0 0 24 24" style="width: 17px; height: 17px; color: #F2F0EA"><use href="#pt-mark" x="0" y="0" width="24" height="24"></use></svg>
+            <span style="font: 590 13px/1 -apple-system, system-ui, sans-serif; color: #F2F0EA">Patchthrough</span>
+          </div>
+          <div style="margin-left: auto; display: flex; align-items: center; gap: 8px">
+            <span style="display: flex; align-items: center; gap: 7px; background: #24231D; border: 1px solid #3A3730; border-radius: 7px; padding: 8px 11px">
+              <svg viewBox="0 0 16 16" style="width: 13px; height: 13px; color: #A29E93"><use href="#i-drag" x="0" y="0" width="16" height="16"></use></svg>
+              <span style="font: 500 12px/1 -apple-system, system-ui, sans-serif; color: #D8D4CA">Drag</span>
+            </span>
+            <div style="display: flex; align-items: stretch; border-radius: 7px; overflow: hidden">
+              <span style="display: flex; align-items: center; gap: 8px; background: #D2371B; padding: 9px 14px">
+                <svg viewBox="0 0 16 16" style="width: 14px; height: 14px; color: #FFF9F4"><use href="#i-arrow" x="0" y="0" width="16" height="16"></use></svg>
+                <span style="font: 590 13px/1 -apple-system, system-ui, sans-serif; color: #FFF9F4">Patch through to claude</span>
+              </span>
+              <span style="display: grid; place-items: center; background: #B72E14; padding: 0 9px; border-left: 1px solid rgba(255,249,244,0.22)">
+                <svg viewBox="0 0 16 16" style="width: 13px; height: 13px; color: #FFF9F4"><use href="#i-chev" x="0" y="0" width="16" height="16"></use></svg>
+              </span>
+            </div>
+            <span style="width: 26px; height: 24px; border-radius: 5px; display: grid; place-items: center; color: #A29E93"><svg viewBox="0 0 16 16" style="width: 15px; height: 15px"><use href="#i-gear" x="0" y="0" width="16" height="16"></use></svg></span>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 252px 1fr; height: 668px">
+          <div style="background: #191813; border-right: 1px solid #2C2A23; display: flex; flex-direction: column">
+            <div style="padding: 12px 12px 10px">
+              <div style="display: flex; align-items: center; gap: 7px; background: #24231D; border: 1px solid #302E27; border-radius: 6px; padding: 6px 9px">
+                <svg viewBox="0 0 16 16" style="width: 13px; height: 13px; color: #6E6B60"><use href="#i-search" x="0" y="0" width="16" height="16"></use></svg>
+                <span style="font: 400 12.5px/1 -apple-system, system-ui, sans-serif; color: #6E6B60">Search transcripts</span>
+              </div>
+            </div>
+            <div style="padding: 4px 8px 0; display: flex; flex-direction: column; gap: 2px">
+              <span style="font: 590 11px/1 -apple-system, system-ui, sans-serif; letter-spacing: 0.04em; text-transform: uppercase; color: #6E6B60; padding: 8px 8px 6px">Yesterday</span>
+              <div style="display: flex; flex-direction: column; gap: 3px; padding: 9px; border-radius: 7px; background: rgba(210,55,27,0.15); border: 1px solid rgba(210,55,27,0.32)">
+                <div style="display: flex; align-items: baseline; gap: 7px">
+                  <span style="font: 590 13px/1 -apple-system, system-ui, sans-serif; color: #F2F0EA">9:45 PM</span>
+                  <span style="font: 400 11px/1 ui-monospace, 'SF Mono', monospace; color: #8C887E">0m42s</span>
+                </div>
+                <span style="font: 400 12px/1.35 -apple-system, system-ui, sans-serif; color: #A29E93; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 206px">the main thing I wanted to cover is the recording lag</span>
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 3px; padding: 9px; border-radius: 7px">
+                <div style="display: flex; align-items: baseline; gap: 7px">
+                  <span style="font: 500 13px/1 -apple-system, system-ui, sans-serif; color: #D8D4CA">8:13 PM</span>
+                  <span style="font: 400 11px/1 ui-monospace, 'SF Mono', monospace; color: #6E6B60">0m10s</span>
+                </div>
+                <span style="font: 400 12px/1.35 -apple-system, system-ui, sans-serif; color: #7E7A70; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 206px">quick check on the notarize step</span>
+              </div>
+            </div>
+            <div style="margin-top: auto; padding: 12px 14px; border-top: 1px solid #24231D; display: flex; align-items: center; gap: 7px">
+              <svg viewBox="0 0 16 16" style="width: 13px; height: 13px; color: #4A473E"><use href="#i-folder" x="0" y="0" width="16" height="16"></use></svg>
+              <span style="font: 400 11px/1 ui-monospace, 'SF Mono', monospace; color: #6E6B60">~/Recordings</span>
+            </div>
+          </div>
+
+          <div style="display: flex; flex-direction: column; min-width: 0; position: relative">
+            <div style="display: flex; align-items: baseline; gap: 12px; padding: 14px 20px 12px; border-bottom: 1px solid #2C2A23">
+              <span style="font: 400 13px/1 ui-monospace, 'SF Mono', monospace; color: #F2F0EA">2026.07.30-2145</span>
+              <span style="font: 400 11.5px/1 -apple-system, system-ui, sans-serif; color: #7E7A70">0m42s · 118 words · 7 segments</span>
+              <span style="margin-left: auto; display: flex; align-items: center; gap: 7px">
+                <svg viewBox="0 0 16 16" style="width: 12px; height: 12px; color: #6E6B60"><use href="#i-folder" x="0" y="0" width="16" height="16"></use></svg>
+                <span style="font: 400 11.5px/1 ui-monospace, 'SF Mono', monospace; color: #8C887E">patchthrough</span>
+              </span>
+            </div>
+
+            <div style="flex: 1; overflow: hidden; padding: 20px 20px 0; display: flex; flex-direction: column; gap: 16px">
+              <div style="display: flex; flex-direction: column; gap: 7px; max-width: 620px">
+                <div style="display: flex; align-items: center; gap: 9px">
+                  <span style="font: 600 10.5px/1 -apple-system, system-ui, sans-serif; letter-spacing: 0.09em; text-transform: uppercase; color: #E4633F">me</span>
+                  <span style="font: 400 11px/1 ui-monospace, 'SF Mono', monospace; color: #57544C">0:00</span>
+                </div>
+                <div style="background: #26221E; border: 1px solid #3A322C; border-radius: 10px; padding: 12px 14px">
+                  <span style="font: 400 14px/1.6 -apple-system, system-ui, sans-serif; color: #F2F0EA; text-wrap: pretty">Okay so the main thing I wanted to cover is the recording lag, right now when you hit start there's about half a second before the microphone actually captures anything, so we lose the first few words every single time, I think we should pre-warm the audio engine when the menu opens instead of when the user clicks record.</span>
+                </div>
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 7px; max-width: 620px; align-self: flex-end; align-items: flex-start">
+                <div style="display: flex; align-items: center; gap: 9px">
+                  <span style="font: 600 10.5px/1 -apple-system, system-ui, sans-serif; letter-spacing: 0.09em; text-transform: uppercase; color: #A29E93">them</span>
+                  <span style="font: 400 11px/1 ui-monospace, 'SF Mono', monospace; color: #57544C">0:00</span>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 6px">
+                  <div style="background: #221F1B; border: 1px solid #302C26; border-radius: 10px; padding: 12px 14px">
+                    <span style="font: 400 14px/1.6 -apple-system, system-ui, sans-serif; color: #D8D4CA; text-wrap: pretty">That makes sense.</span>
+                  </div>
+                  <div style="background: #221F1B; border: 1px solid #302C26; border-radius: 10px; padding: 12px 14px">
+                    <span style="font: 400 14px/1.6 -apple-system, system-ui, sans-serif; color: #D8D4CA; text-wrap: pretty">One constraint though, we can't hold the microphone open all the time because the orange indicator would stay lit and people will think we're always listening.</span>
+                  </div>
+                </div>
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 7px; max-width: 620px; align-self: flex-end; align-items: flex-start">
+                <div style="display: flex; align-items: center; gap: 9px">
+                  <span style="font: 600 10.5px/1 -apple-system, system-ui, sans-serif; letter-spacing: 0.09em; text-transform: uppercase; color: #A29E93">them</span>
+                  <span style="font: 400 11px/1 ui-monospace, 'SF Mono', monospace; color: #57544C">0:10</span>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 6px">
+                  <div style="background: #221F1B; border: 1px solid #302C26; border-radius: 10px; padding: 12px 14px">
+                    <span style="font: 400 14px/1.6 -apple-system, system-ui, sans-serif; color: #D8D4CA; text-wrap: pretty">Also can you make sure the transcript failure path doesn't write an empty file? I saw that bite someone last week.</span>
+                  </div>
+                  <div style="background: #221F1B; border: 1px solid #302C26; border-radius: 10px; padding: 12px 14px">
+                    <span style="font: 400 14px/1.6 -apple-system, system-ui, sans-serif; color: #D8D4CA; text-wrap: pretty">And let's not touch the dependency pinning. That's settled.</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div style="position: absolute; top: 8px; right: 20px; width: 268px; background: #24231D; border: 1px solid #454138; border-radius: 9px; box-shadow: 0 18px 40px rgba(0,0,0,0.6); padding: 6px; display: flex; flex-direction: column; gap: 1px">
+              <span style="font: 590 10px/1 -apple-system, system-ui, sans-serif; letter-spacing: 0.08em; text-transform: uppercase; color: #6E6B60; padding: 8px 10px 6px">Most used</span>
+              <div style="display: flex; align-items: center; gap: 9px; padding: 8px 10px; border-radius: 5px; background: rgba(210,55,27,0.16)">
+                <svg viewBox="0 0 16 16" style="width: 14px; height: 14px; color: #E4633F"><use href="#i-term" x="0" y="0" width="16" height="16"></use></svg>
+                <span style="font: 500 12.5px/1 -apple-system, system-ui, sans-serif; color: #F2F0EA">claude</span>
+                <span style="margin-left: auto; font: 400 10.5px/1 ui-monospace, 'SF Mono', monospace; color: #8C887E">14×</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 9px; padding: 8px 10px; border-radius: 5px">
+                <svg viewBox="0 0 16 16" style="width: 14px; height: 14px; color: #8C887E"><use href="#i-app" x="0" y="0" width="16" height="16"></use></svg>
+                <span style="font: 400 12.5px/1 -apple-system, system-ui, sans-serif; color: #D8D4CA">Claude app</span>
+                <span style="margin-left: auto; font: 400 10.5px/1 ui-monospace, 'SF Mono', monospace; color: #6E6B60">5×</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 9px; padding: 8px 10px; border-radius: 5px">
+                <svg viewBox="0 0 16 16" style="width: 14px; height: 14px; color: #8C887E"><use href="#i-term" x="0" y="0" width="16" height="16"></use></svg>
+                <span style="font: 400 12.5px/1 -apple-system, system-ui, sans-serif; color: #D8D4CA">opencode</span>
+                <span style="margin-left: auto; font: 400 10.5px/1 ui-monospace, 'SF Mono', monospace; color: #6E6B60">2×</span>
+              </div>
+              <span style="height: 1px; background: #35322A; margin: 5px 8px"></span>
+              <span style="font: 590 10px/1 -apple-system, system-ui, sans-serif; letter-spacing: 0.08em; text-transform: uppercase; color: #6E6B60; padding: 6px 10px 6px">Terminal</span>
+              <div style="display: flex; align-items: center; gap: 9px; padding: 7px 10px; border-radius: 5px">
+                <svg viewBox="0 0 16 16" style="width: 14px; height: 14px; color: #8C887E"><use href="#i-term" x="0" y="0" width="16" height="16"></use></svg>
+                <span style="font: 400 12.5px/1 -apple-system, system-ui, sans-serif; color: #A29E93">cursor-agent</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 9px; padding: 7px 10px; border-radius: 5px">
+                <svg viewBox="0 0 16 16" style="width: 14px; height: 14px; color: #8C887E"><use href="#i-term" x="0" y="0" width="16" height="16"></use></svg>
+                <span style="font: 400 12.5px/1 -apple-system, system-ui, sans-serif; color: #A29E93">kimi</span>
+              </div>
+              <span style="font: 590 10px/1 -apple-system, system-ui, sans-serif; letter-spacing: 0.08em; text-transform: uppercase; color: #6E6B60; padding: 8px 10px 6px">App</span>
+              <div style="display: flex; align-items: center; gap: 9px; padding: 7px 10px; border-radius: 5px">
+                <svg viewBox="0 0 16 16" style="width: 14px; height: 14px; color: #8C887E"><use href="#i-app" x="0" y="0" width="16" height="16"></use></svg>
+                <span style="font: 400 12.5px/1 -apple-system, system-ui, sans-serif; color: #A29E93">Copilot — VS Code</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 9px; padding: 7px 10px; border-radius: 5px">
+                <svg viewBox="0 0 16 16" style="width: 14px; height: 14px; color: #8C887E"><use href="#i-app" x="0" y="0" width="16" height="16"></use></svg>
+                <span style="font: 400 12.5px/1 -apple-system, system-ui, sans-serif; color: #A29E93">Claude Cowork</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="10c" style="display: flex; flex-direction: column; gap: 14px">
+      <div style="display: flex; align-items: center; gap: 11px">
+        <span style="font: 500 11px/1 ui-monospace, 'SF Mono', monospace; letter-spacing: 0.1em; color: #F2F0EA; border: 1px solid #4A473E; padding: 6px 8px; border-radius: 3px">10c</span>
+        <h3 style="margin: 0; font: 600 20px/1 -apple-system, system-ui, sans-serif; letter-spacing: -0.02em; color: #F2F0EA">The Route</h3>
+        <span style="font: 400 13px/1 -apple-system, system-ui, sans-serif; color: #7E7A70">— states the whole patch as one line</span>
+      </div>
+      <p style="margin: 0; max-width: 58ch; font: 400 14px/1.55 -apple-system, system-ui, sans-serif; color: #A29E93; text-wrap: pretty">Leans into the name. A patch is a route — <em style="color: #D8D4CA; font-style: normal">this session → this repo → this agent</em> — so the app shows the route as one editable line with a single button at the end. Destinations live in a ⌘K palette, so ten targets cost no screen space at all.</p>
+
+      <div style="width: 940px; border-radius: 11px; overflow: hidden; background: #1C1B17; border: 1px solid #35322A; box-shadow: 0 26px 60px rgba(0,0,0,0.55)">
+        <div style="height: 46px; background: #201F1A; border-bottom: 1px solid #2C2A23; display: flex; align-items: center; padding: 0 14px; gap: 14px">
+          <div style="display: flex; gap: 8px">
+            <span style="width: 12px; height: 12px; border-radius: 99px; background: #FF5F57"></span>
+            <span style="width: 12px; height: 12px; border-radius: 99px; background: #FEBC2E"></span>
+            <span style="width: 12px; height: 12px; border-radius: 99px; background: #28C840"></span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 9px; margin-left: 8px">
+            <svg viewBox="0 0 24 24" style="width: 17px; height: 17px; color: #F2F0EA"><use href="#pt-mark" x="0" y="0" width="24" height="24"></use></svg>
+            <span style="font: 590 13px/1 -apple-system, system-ui, sans-serif; color: #F2F0EA">Patchthrough</span>
+          </div>
+          <div style="margin-left: auto; display: flex; align-items: center; gap: 8px">
+            <span style="display: flex; align-items: center; gap: 7px; font: 400 11px/1 ui-monospace, 'SF Mono', monospace; color: #E4633F; background: rgba(210,55,27,0.14); border: 1px solid rgba(210,55,27,0.4); border-radius: 5px; padding: 6px 9px">
+              <span style="width: 6px; height: 6px; border-radius: 99px; background: #D2371B; animation: ptPulse 1.6s ease-in-out infinite"></span>recording 1:04
+            </span>
+            <span style="width: 26px; height: 24px; border-radius: 5px; display: grid; place-items: center; color: #A29E93"><svg viewBox="0 0 16 16" style="width: 15px; height: 15px"><use href="#i-gear" x="0" y="0" width="16" height="16"></use></svg></span>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 236px 1fr; height: 674px">
+          <div style="background: #191813; border-right: 1px solid #2C2A23; display: flex; flex-direction: column">
+            <div style="padding: 12px 12px 10px">
+              <div style="display: flex; align-items: center; gap: 7px; background: #24231D; border: 1px solid #302E27; border-radius: 6px; padding: 6px 9px">
+                <svg viewBox="0 0 16 16" style="width: 13px; height: 13px; color: #6E6B60"><use href="#i-search" x="0" y="0" width="16" height="16"></use></svg>
+                <span style="font: 400 12.5px/1 -apple-system, system-ui, sans-serif; color: #6E6B60">Search transcripts</span>
+              </div>
+            </div>
+            <div style="padding: 4px 8px 0; display: flex; flex-direction: column; gap: 2px">
+              <span style="font: 590 11px/1 -apple-system, system-ui, sans-serif; letter-spacing: 0.04em; text-transform: uppercase; color: #6E6B60; padding: 8px 8px 6px">Recording now</span>
+              <div style="display: flex; flex-direction: column; gap: 3px; padding: 9px; border-radius: 7px; background: rgba(210,55,27,0.09); border: 1px solid rgba(210,55,27,0.22)">
+                <div style="display: flex; align-items: baseline; gap: 7px">
+                  <span style="font: 590 13px/1 -apple-system, system-ui, sans-serif; color: #F2F0EA">10:31 PM</span>
+                  <span style="font: 400 11px/1 ui-monospace, 'SF Mono', monospace; color: #E4633F">1:04</span>
+                </div>
+                <span style="font: 400 12px/1.35 -apple-system, system-ui, sans-serif; color: #7E7A70">in progress</span>
+              </div>
+              <span style="font: 590 11px/1 -apple-system, system-ui, sans-serif; letter-spacing: 0.04em; text-transform: uppercase; color: #6E6B60; padding: 12px 8px 6px">Yesterday</span>
+              <div style="display: flex; flex-direction: column; gap: 3px; padding: 9px; border-radius: 7px; background: rgba(242,240,234,0.08); border: 1px solid #3A3730">
+                <div style="display: flex; align-items: baseline; gap: 7px">
+                  <span style="font: 590 13px/1 -apple-system, system-ui, sans-serif; color: #F2F0EA">9:45 PM</span>
+                  <span style="font: 400 11px/1 ui-monospace, 'SF Mono', monospace; color: #8C887E">0m42s</span>
+                </div>
+                <span style="font: 400 12px/1.35 -apple-system, system-ui, sans-serif; color: #A29E93; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 190px">the main thing I wanted to cover is the recording lag</span>
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 3px; padding: 9px; border-radius: 7px">
+                <div style="display: flex; align-items: baseline; gap: 7px">
+                  <span style="font: 500 13px/1 -apple-system, system-ui, sans-serif; color: #D8D4CA">8:13 PM</span>
+                  <span style="font: 400 11px/1 ui-monospace, 'SF Mono', monospace; color: #6E6B60">0m10s</span>
+                </div>
+                <span style="font: 400 12px/1.35 -apple-system, system-ui, sans-serif; color: #7E7A70; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 190px">quick check on the notarize step</span>
+              </div>
+            </div>
+          </div>
+
+          <div style="display: flex; flex-direction: column; min-width: 0; position: relative">
+            <div style="padding: 16px 20px; border-bottom: 1px solid #2C2A23; display: flex; align-items: center; gap: 10px; background: #1E1D18">
+              <div style="display: flex; align-items: center; gap: 8px; background: #24231D; border: 1px solid #35322A; border-radius: 7px; padding: 8px 11px; flex: none; white-space: nowrap">
+                <svg viewBox="0 0 24 24" style="width: 14px; height: 14px; color: #8C887E; flex: none"><use href="#pt-mark" x="0" y="0" width="24" height="24"></use></svg>
+                <span style="font: 400 12px/1 ui-monospace, 'SF Mono', monospace; color: #F2F0EA">2026.07.30-2145</span>
+              </div>
+              <svg viewBox="0 0 16 16" style="width: 14px; height: 14px; color: #57544C; flex: none"><use href="#i-arrow" x="0" y="0" width="16" height="16"></use></svg>
+              <div style="display: flex; align-items: center; gap: 8px; background: #24231D; border: 1px solid #35322A; border-radius: 7px; padding: 8px 11px; flex: none; white-space: nowrap">
+                <svg viewBox="0 0 16 16" style="width: 13px; height: 13px; color: #8C887E; flex: none"><use href="#i-folder" x="0" y="0" width="16" height="16"></use></svg>
+                <span style="font: 400 12px/1 ui-monospace, 'SF Mono', monospace; color: #D8D4CA">patchthrough</span>
+              </div>
+              <svg viewBox="0 0 16 16" style="width: 14px; height: 14px; color: #57544C; flex: none"><use href="#i-arrow" x="0" y="0" width="16" height="16"></use></svg>
+              <div style="display: flex; align-items: center; gap: 8px; background: rgba(210,55,27,0.14); border: 1px solid rgba(210,55,27,0.45); border-radius: 7px; padding: 8px 11px; flex: none; white-space: nowrap">
+                <svg viewBox="0 0 16 16" style="width: 13px; height: 13px; color: #E4633F; flex: none"><use href="#i-term" x="0" y="0" width="16" height="16"></use></svg>
+                <span style="font: 500 12px/1 -apple-system, system-ui, sans-serif; color: #F2F0EA">claude</span>
+                <span style="font: 400 10.5px/1 ui-monospace, 'SF Mono', monospace; color: #A2705F; border: 1px solid rgba(210,55,27,0.35); border-radius: 3px; padding: 3px 4px; flex: none">⌘K</span>
+              </div>
+              <span style="margin-left: auto; display: flex; align-items: center; gap: 8px; background: #D2371B; border-radius: 7px; padding: 10px 16px; flex: none; white-space: nowrap">
+                <span style="font: 590 13px/1 -apple-system, system-ui, sans-serif; color: #FFF9F4">Patch through</span>
+                <span style="font: 400 11px/1 ui-monospace, 'SF Mono', monospace; color: rgba(255,249,244,0.7)">⏎</span>
+              </span>
+            </div>
+
+            <div style="flex: 1; overflow: hidden; padding: 18px 20px 0; display: flex; flex-direction: column; gap: 14px">
+              <div style="display: grid; grid-template-columns: 62px 1fr; gap: 14px; align-items: start">
+                <span style="font: 600 10.5px/1.5 -apple-system, system-ui, sans-serif; letter-spacing: 0.09em; text-transform: uppercase; color: #E4633F; text-align: right; padding-top: 3px">me<br><span style="font: 400 10px/1 ui-monospace, 'SF Mono', monospace; letter-spacing: 0; text-transform: none; color: #57544C">0:00</span></span>
+                <span style="font: 400 14.5px/1.62 -apple-system, system-ui, sans-serif; color: #F2F0EA; text-wrap: pretty">Okay so the main thing I wanted to cover is the recording lag, right now when you hit start there's about half a second before the microphone actually captures anything, so we lose the first few words every single time, I think we should pre-warm the audio engine when the menu opens instead of when the user clicks record.</span>
+              </div>
+              <div style="display: grid; grid-template-columns: 62px 1fr; gap: 14px; align-items: start">
+                <span style="font: 600 10.5px/1.5 -apple-system, system-ui, sans-serif; letter-spacing: 0.09em; text-transform: uppercase; color: #8C887E; text-align: right; padding-top: 3px">them<br><span style="font: 400 10px/1 ui-monospace, 'SF Mono', monospace; letter-spacing: 0; text-transform: none; color: #57544C">0:00</span></span>
+                <div style="display: flex; flex-direction: column; gap: 9px">
+                  <span style="font: 400 14.5px/1.62 -apple-system, system-ui, sans-serif; color: #D8D4CA; text-wrap: pretty">That makes sense.</span>
+                  <span style="font: 400 14.5px/1.62 -apple-system, system-ui, sans-serif; color: #D8D4CA; text-wrap: pretty">One constraint though, we can't hold the microphone open all the time because the orange indicator would stay lit and people will think we're always listening.</span>
+                </div>
+              </div>
+              <div style="display: grid; grid-template-columns: 62px 1fr; gap: 14px; align-items: start">
+                <span style="font: 600 10.5px/1.5 -apple-system, system-ui, sans-serif; letter-spacing: 0.09em; text-transform: uppercase; color: #8C887E; text-align: right; padding-top: 3px">them<br><span style="font: 400 10px/1 ui-monospace, 'SF Mono', monospace; letter-spacing: 0; text-transform: none; color: #57544C">0:10</span></span>
+                <div style="display: flex; flex-direction: column; gap: 9px">
+                  <span style="font: 400 14.5px/1.62 -apple-system, system-ui, sans-serif; color: #D8D4CA; text-wrap: pretty">Also can you make sure the transcript failure path doesn't write an empty file? I saw that bite someone last week.</span>
+                  <span style="font: 400 14.5px/1.62 -apple-system, system-ui, sans-serif; color: #D8D4CA; text-wrap: pretty">And let's not touch the dependency pinning. That's settled.</span>
+                </div>
+              </div>
+            </div>
+
+            <div style="position: absolute; inset: 0; background: rgba(14,13,10,0.55); display: flex; justify-content: center; padding-top: 96px">
+              <div style="width: 470px; height: fit-content; background: #24231D; border: 1px solid #4A473E; border-radius: 12px; box-shadow: 0 30px 70px rgba(0,0,0,0.7); overflow: hidden">
+                <div style="display: flex; align-items: center; gap: 10px; padding: 14px 16px; border-bottom: 1px solid #35322A">
+                  <svg viewBox="0 0 16 16" style="width: 15px; height: 15px; color: #6E6B60"><use href="#i-search" x="0" y="0" width="16" height="16"></use></svg>
+                  <span style="font: 400 15px/1 -apple-system, system-ui, sans-serif; color: #F2F0EA">cl</span>
+                  <span style="width: 1.5px; height: 17px; background: #D2371B"></span>
+                  <span style="margin-left: auto; font: 400 11px/1 ui-monospace, 'SF Mono', monospace; color: #57544C">Patch this session to…</span>
+                </div>
+                <div style="padding: 6px; display: flex; flex-direction: column; gap: 1px">
+                  <div style="display: flex; align-items: center; gap: 10px; padding: 9px 11px; border-radius: 6px; background: rgba(210,55,27,0.17)">
+                    <svg viewBox="0 0 16 16" style="width: 14px; height: 14px; color: #E4633F"><use href="#i-term" x="0" y="0" width="16" height="16"></use></svg>
+                    <span style="font: 500 13px/1 -apple-system, system-ui, sans-serif; color: #F2F0EA">claude</span>
+                    <span style="font: 400 11px/1 -apple-system, system-ui, sans-serif; color: #8C887E">terminal · used 14×</span>
+                    <svg viewBox="0 0 16 16" style="width: 13px; height: 13px; margin-left: auto; color: #E4633F"><use href="#i-arrow" x="0" y="0" width="16" height="16"></use></svg>
+                  </div>
+                  <div style="display: flex; align-items: center; gap: 10px; padding: 9px 11px; border-radius: 6px">
+                    <svg viewBox="0 0 16 16" style="width: 14px; height: 14px; color: #8C887E"><use href="#i-app" x="0" y="0" width="16" height="16"></use></svg>
+                    <span style="font: 400 13px/1 -apple-system, system-ui, sans-serif; color: #D8D4CA">Claude app</span>
+                    <span style="font: 400 11px/1 -apple-system, system-ui, sans-serif; color: #6E6B60">attaches the transcript · 5×</span>
+                  </div>
+                  <div style="display: flex; align-items: center; gap: 10px; padding: 9px 11px; border-radius: 6px">
+                    <svg viewBox="0 0 16 16" style="width: 14px; height: 14px; color: #8C887E"><use href="#i-app" x="0" y="0" width="16" height="16"></use></svg>
+                    <span style="font: 400 13px/1 -apple-system, system-ui, sans-serif; color: #D8D4CA">Claude Cowork</span>
+                    <span style="font: 400 11px/1 -apple-system, system-ui, sans-serif; color: #6E6B60">opens the session folder</span>
+                  </div>
+                  <div style="display: flex; align-items: center; gap: 10px; padding: 9px 11px; border-radius: 6px">
+                    <svg viewBox="0 0 16 16" style="width: 14px; height: 14px; color: #8C887E"><use href="#i-term" x="0" y="0" width="16" height="16"></use></svg>
+                    <span style="font: 400 13px/1 -apple-system, system-ui, sans-serif; color: #D8D4CA">cursor-agent</span>
+                    <span style="font: 400 11px/1 -apple-system, system-ui, sans-serif; color: #6E6B60">terminal</span>
+                  </div>
+                </div>
+                <div style="display: flex; align-items: center; gap: 14px; padding: 9px 14px; border-top: 1px solid #35322A; background: #201F1A">
+                  <span style="font: 400 10.5px/1 ui-monospace, 'SF Mono', monospace; color: #57544C">↑↓ move</span>
+                  <span style="font: 400 10.5px/1 ui-monospace, 'SF Mono', monospace; color: #57544C">⏎ patch through</span>
+                  <span style="font: 400 10.5px/1 ui-monospace, 'SF Mono', monospace; color: #57544C">⌘⏎ new terminal</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div style="display: flex; flex-direction: column; gap: 16px; padding-top: 20px; border-top: 1px solid #2C2A23">
+    <div style="display: flex; flex-direction: column; gap: 8px; max-width: 74ch">
+      <span style="font: 500 11px/1 ui-monospace, 'SF Mono', monospace; letter-spacing: 0.13em; text-transform: uppercase; color: #7E7A70">Not variants — one design each</span>
+      <p style="margin: 0; font: 400 15px/1.55 -apple-system, system-ui, sans-serif; color: #A29E93; text-wrap: pretty">The settings sheet and the menu bar dropdown work the same way whichever window direction you pick, so there's one of each. Both are pure SwiftUI/AppKit primitives.</p>
+    </div>
+
+    <div style="display: flex; flex-wrap: wrap; gap: 28px; align-items: flex-start">
+
+      <div id="10d" style="display: flex; flex-direction: column; gap: 12px">
+        <div style="display: flex; align-items: center; gap: 11px">
+          <span style="font: 500 11px/1 ui-monospace, 'SF Mono', monospace; letter-spacing: 0.1em; color: #F2F0EA; border: 1px solid #4A473E; padding: 6px 8px; border-radius: 3px">10d</span>
+          <h3 style="margin: 0; font: 600 18px/1 -apple-system, system-ui, sans-serif; letter-spacing: -0.018em; color: #F2F0EA">Settings</h3>
+          <span style="font: 400 13px/1 -apple-system, system-ui, sans-serif; color: #7E7A70">— every row says what it costs you</span>
+        </div>
+        <p style="margin: 0; max-width: 54ch; font: 400 13.5px/1.55 -apple-system, system-ui, sans-serif; color: #A29E93; text-wrap: pretty">The current sheet is 560pt tall and still scrolls, so the last section is invisible. Four sections, no scroll, and the two toggles with real consequences carry their warning inline instead of in grey small print.</p>
+
+        <div style="width: 560px; background: #201F1A; border: 1px solid #3A3730; border-radius: 11px; overflow: hidden; box-shadow: 0 26px 60px rgba(0,0,0,0.55)">
+          <div style="padding: 18px 20px 14px; border-bottom: 1px solid #2C2A23; display: flex; align-items: center; gap: 10px">
+            <svg viewBox="0 0 24 24" style="width: 17px; height: 17px; color: #F2F0EA"><use href="#pt-mark" x="0" y="0" width="24" height="24"></use></svg>
+            <span style="font: 600 15px/1 -apple-system, system-ui, sans-serif; color: #F2F0EA">Settings</span>
+            <span style="margin-left: auto; font: 400 11px/1 ui-monospace, 'SF Mono', monospace; color: #57544C">~/.config/patchthrough/config.json</span>
+          </div>
+
+          <div style="padding: 18px 20px; display: flex; flex-direction: column; gap: 22px">
+            <div style="display: flex; flex-direction: column; gap: 9px">
+              <span style="font: 590 10.5px/1 -apple-system, system-ui, sans-serif; letter-spacing: 0.09em; text-transform: uppercase; color: #7E7A70">Recordings</span>
+              <div style="display: flex; align-items: center; gap: 9px">
+                <div style="flex: 1; background: #17160F; border: 1px solid #35322A; border-radius: 6px; padding: 8px 11px; font: 400 12.5px/1 ui-monospace, 'SF Mono', monospace; color: #F2F0EA">~/Recordings</div>
+                <span style="font: 500 12.5px/1 -apple-system, system-ui, sans-serif; color: #D8D4CA; background: #2A2822; border: 1px solid #3A3730; border-radius: 6px; padding: 8px 12px">Choose…</span>
+              </div>
+              <span style="font: 400 11.5px/1.45 -apple-system, system-ui, sans-serif; color: #6E6B60">Applies to the next recording. Existing sessions stay where they are.</span>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 9px">
+              <span style="font: 590 10.5px/1 -apple-system, system-ui, sans-serif; letter-spacing: 0.09em; text-transform: uppercase; color: #7E7A70">Transcription</span>
+              <div style="display: flex; align-items: center; gap: 12px; padding: 11px 13px; background: #24231D; border: 1px solid #302E27; border-radius: 8px">
+                <div style="display: flex; flex-direction: column; gap: 2px">
+                  <span style="font: 400 13.5px/1 -apple-system, system-ui, sans-serif; color: #F2F0EA">Transcribe after each recording</span>
+                  <span style="font: 400 11.5px/1 -apple-system, system-ui, sans-serif; color: #6E6B60">On-device, ~20s per hour of audio</span>
+                </div>
+                <span style="margin-left: auto; width: 38px; height: 22px; border-radius: 99px; background: #D2371B; display: flex; align-items: center; justify-content: flex-end; padding: 0 2px; flex: none">
+                  <span style="width: 18px; height: 18px; border-radius: 99px; background: #FFF9F4"></span>
+                </span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 12px; padding: 11px 13px; background: #24231D; border: 1px solid #302E27; border-radius: 8px">
+                <div style="display: flex; flex-direction: column; gap: 2px">
+                  <span style="font: 400 13.5px/1 -apple-system, system-ui, sans-serif; color: #F2F0EA">Echo cancellation on the mic</span>
+                  <span style="font: 400 11.5px/1 -apple-system, system-ui, sans-serif; color: #6E6B60">Cleaner on speakers, thinner on headphones</span>
+                </div>
+                <span style="margin-left: auto; width: 38px; height: 22px; border-radius: 99px; background: #35322A; display: flex; align-items: center; padding: 0 2px; flex: none">
+                  <span style="width: 18px; height: 18px; border-radius: 99px; background: #8C887E"></span>
+                </span>
+              </div>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 9px">
+              <span style="font: 590 10.5px/1 -apple-system, system-ui, sans-serif; letter-spacing: 0.09em; text-transform: uppercase; color: #7E7A70">Patch through</span>
+              <div style="display: flex; flex-direction: column; gap: 0; background: #24231D; border: 1px solid #302E27; border-radius: 8px; overflow: hidden">
+                <div style="display: flex; align-items: center; gap: 12px; padding: 11px 13px">
+                  <div style="display: flex; flex-direction: column; gap: 2px">
+                    <span style="font: 400 13.5px/1 -apple-system, system-ui, sans-serif; color: #F2F0EA">Paste automatically after a clipboard handoff</span>
+                    <span style="font: 400 11.5px/1 -apple-system, system-ui, sans-serif; color: #6E6B60">Types ⌘N then ⌘V. Never presses send.</span>
+                  </div>
+                  <span style="margin-left: auto; width: 38px; height: 22px; border-radius: 99px; background: #35322A; display: flex; align-items: center; padding: 0 2px; flex: none">
+                    <span style="width: 18px; height: 18px; border-radius: 99px; background: #8C887E"></span>
+                  </span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px; padding: 9px 13px; background: rgba(210,55,27,0.1); border-top: 1px solid #302E27">
+                  <span style="font: 400 11.5px/1.4 -apple-system, system-ui, sans-serif; color: #C98872">Requires Accessibility permission — macOS will ask once.</span>
+                  <span style="margin-left: auto; font: 500 11.5px/1 -apple-system, system-ui, sans-serif; color: #E4633F; flex: none">Grant now</span>
+                </div>
+              </div>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 9px">
+              <span style="font: 590 10.5px/1 -apple-system, system-ui, sans-serif; letter-spacing: 0.09em; text-transform: uppercase; color: #7E7A70">After each transcript</span>
+              <div style="background: #17160F; border: 1px solid #35322A; border-radius: 6px; padding: 8px 11px; font: 400 12.5px/1 ui-monospace, 'SF Mono', monospace; color: #57544C">my-hook</div>
+              <span style="font: 400 11.5px/1.45 -apple-system, system-ui, sans-serif; color: #6E6B60">Runs with the session folder as its only argument. Empty for none.</span>
+            </div>
+          </div>
+
+          <div style="display: flex; align-items: center; gap: 10px; padding: 13px 20px; border-top: 1px solid #2C2A23; background: #1C1B17">
+            <span style="font: 400 12px/1 -apple-system, system-ui, sans-serif; color: #7E7A70">Reveal config file</span>
+            <span style="margin-left: auto; font: 500 12.5px/1 -apple-system, system-ui, sans-serif; color: #D8D4CA; background: #2A2822; border: 1px solid #3A3730; border-radius: 6px; padding: 9px 15px">Cancel</span>
+            <span style="font: 590 12.5px/1 -apple-system, system-ui, sans-serif; color: #FFF9F4; background: #D2371B; border-radius: 6px; padding: 9px 17px">Save</span>
+          </div>
+        </div>
+      </div>
+
+      <div id="10e" style="display: flex; flex-direction: column; gap: 12px">
+        <div style="display: flex; align-items: center; gap: 11px">
+          <span style="font: 500 11px/1 ui-monospace, 'SF Mono', monospace; letter-spacing: 0.1em; color: #F2F0EA; border: 1px solid #4A473E; padding: 6px 8px; border-radius: 3px">10e</span>
+          <h3 style="margin: 0; font: 600 18px/1 -apple-system, system-ui, sans-serif; letter-spacing: -0.018em; color: #F2F0EA">Menu bar</h3>
+          <span style="font: 400 13px/1 -apple-system, system-ui, sans-serif; color: #7E7A70">— two states, both one glance</span>
+        </div>
+        <p style="margin: 0; max-width: 46ch; font: 400 13.5px/1.55 -apple-system, system-ui, sans-serif; color: #A29E93; text-wrap: pretty">The dropdown is where recording lives, so it leads with the verb. "Patch through to" gets the most-used agent promoted to the top level — the whole loop without opening the window.</p>
+
+        <div style="display: flex; gap: 20px; align-items: flex-start; flex-wrap: wrap">
+          <div style="display: flex; flex-direction: column; gap: 9px">
+            <div style="width: 300px; border-radius: 10px; overflow: hidden; background: #2A2822; border: 1px solid #45423A; box-shadow: 0 22px 50px rgba(0,0,0,0.6)">
+              <div style="padding: 9px 12px; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid #35322A">
+                <span style="width: 7px; height: 7px; border-radius: 99px; background: #57544C"></span>
+                <span style="font: 400 12px/1 -apple-system, system-ui, sans-serif; color: #8C887E">Idle · 2 sessions</span>
+              </div>
+              <div style="padding: 5px">
+                <div style="display: flex; align-items: center; gap: 9px; padding: 8px 10px; border-radius: 5px; background: rgba(210,55,27,0.16)">
+                  <span style="width: 9px; height: 9px; border-radius: 99px; background: #D2371B; flex: none"></span>
+                  <span style="font: 500 13px/1 -apple-system, system-ui, sans-serif; color: #F2F0EA">Start recording</span>
+                  <span style="margin-left: auto; font: 400 11.5px/1 ui-monospace, 'SF Mono', monospace; color: #A2705F">⌘R</span>
+                </div>
+                <span style="display: block; height: 1px; background: #35322A; margin: 5px 8px"></span>
+                <div style="display: flex; align-items: center; gap: 9px; padding: 8px 10px; border-radius: 5px">
+                  <svg viewBox="0 0 16 16" style="width: 14px; height: 14px; color: #A29E93"><use href="#i-term" x="0" y="0" width="16" height="16"></use></svg>
+                  <span style="font: 400 13px/1 -apple-system, system-ui, sans-serif; color: #F2F0EA">Patch 9:45 PM to claude</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 9px; padding: 8px 10px; border-radius: 5px">
+                  <span style="width: 14px"></span>
+                  <span style="font: 400 13px/1 -apple-system, system-ui, sans-serif; color: #A29E93">Patch through to</span>
+                  <svg viewBox="0 0 16 16" style="width: 12px; height: 12px; margin-left: auto; color: #6E6B60; transform: rotate(-90deg)"><use href="#i-chev" x="0" y="0" width="16" height="16"></use></svg>
+                </div>
+                <span style="display: block; height: 1px; background: #35322A; margin: 5px 8px"></span>
+                <div style="display: flex; align-items: center; gap: 9px; padding: 8px 10px; border-radius: 5px">
+                  <span style="width: 14px"></span>
+                  <span style="font: 400 13px/1 -apple-system, system-ui, sans-serif; color: #D8D4CA">Open Patchthrough…</span>
+                  <span style="margin-left: auto; font: 400 11.5px/1 ui-monospace, 'SF Mono', monospace; color: #57544C">⌘B</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 9px; padding: 8px 10px; border-radius: 5px">
+                  <span style="width: 14px"></span>
+                  <span style="font: 400 13px/1 -apple-system, system-ui, sans-serif; color: #D8D4CA">Recordings folder</span>
+                  <span style="margin-left: auto; font: 400 11.5px/1 ui-monospace, 'SF Mono', monospace; color: #57544C">⌘O</span>
+                </div>
+                <span style="display: block; height: 1px; background: #35322A; margin: 5px 8px"></span>
+                <div style="display: flex; align-items: center; gap: 9px; padding: 8px 10px; border-radius: 5px">
+                  <span style="width: 14px"></span>
+                  <span style="font: 400 13px/1 -apple-system, system-ui, sans-serif; color: #D8D4CA">Quit</span>
+                  <span style="margin-left: auto; font: 400 11.5px/1 ui-monospace, 'SF Mono', monospace; color: #57544C">⌘Q</span>
+                </div>
+              </div>
+            </div>
+            <span style="font: 400 11px/1 ui-monospace, 'SF Mono', monospace; color: #6E6B60; text-align: center">Idle</span>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 9px">
+            <div style="width: 300px; border-radius: 10px; overflow: hidden; background: #2A2822; border: 1px solid #45423A; box-shadow: 0 22px 50px rgba(0,0,0,0.6)">
+              <div style="padding: 9px 12px; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid #35322A; background: rgba(210,55,27,0.1)">
+                <span style="width: 7px; height: 7px; border-radius: 99px; background: #D2371B; animation: ptPulse 1.6s ease-in-out infinite"></span>
+                <span style="font: 400 12px/1 -apple-system, system-ui, sans-serif; color: #E4633F">Recording</span>
+                <span style="margin-left: auto; font: 400 12px/1 ui-monospace, 'SF Mono', monospace; color: #F2F0EA">1:04</span>
+              </div>
+              <div style="padding: 5px">
+                <div style="display: flex; align-items: center; gap: 9px; padding: 8px 10px; border-radius: 5px; background: rgba(210,55,27,0.16)">
+                  <span style="width: 9px; height: 9px; border-radius: 2px; background: #D2371B; flex: none"></span>
+                  <span style="font: 500 13px/1 -apple-system, system-ui, sans-serif; color: #F2F0EA">Stop &amp; transcribe</span>
+                  <span style="margin-left: auto; font: 400 11.5px/1 ui-monospace, 'SF Mono', monospace; color: #A2705F">⌘R</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 9px; padding: 8px 10px 4px">
+                  <span style="width: 14px"></span>
+                  <span style="font: 400 11.5px/1.4 -apple-system, system-ui, sans-serif; color: #6E6B60">mic + system audio · 2 tracks</span>
+                </div>
+                <span style="display: block; height: 1px; background: #35322A; margin: 5px 8px"></span>
+                <div style="display: flex; align-items: center; gap: 9px; padding: 8px 10px; border-radius: 5px">
+                  <span style="width: 14px"></span>
+                  <span style="font: 400 13px/1 -apple-system, system-ui, sans-serif; color: #57544C">Patch through to</span>
+                  <svg viewBox="0 0 16 16" style="width: 12px; height: 12px; margin-left: auto; color: #45423A; transform: rotate(-90deg)"><use href="#i-chev" x="0" y="0" width="16" height="16"></use></svg>
+                </div>
+                <span style="display: block; height: 1px; background: #35322A; margin: 5px 8px"></span>
+                <div style="display: flex; align-items: center; gap: 9px; padding: 8px 10px; border-radius: 5px">
+                  <span style="width: 14px"></span>
+                  <span style="font: 400 13px/1 -apple-system, system-ui, sans-serif; color: #D8D4CA">Open Patchthrough…</span>
+                  <span style="margin-left: auto; font: 400 11.5px/1 ui-monospace, 'SF Mono', monospace; color: #57544C">⌘B</span>
+                </div>
+              </div>
+            </div>
+            <span style="font: 400 11px/1 ui-monospace, 'SF Mono', monospace; color: #6E6B60; text-align: center">Recording</span>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 12px; width: 300px">
+            <span style="font: 590 10.5px/1 -apple-system, system-ui, sans-serif; letter-spacing: 0.09em; text-transform: uppercase; color: #7E7A70">The status item itself</span>
+            <div style="border-radius: 7px; overflow: hidden; border: 1px solid #302E27">
+              <div style="height: 28px; background: #1C1B17; display: flex; align-items: center; justify-content: flex-end; gap: 14px; padding: 0 12px">
+                <svg viewBox="0 0 24 24" style="width: 18px; height: 18px; color: #F2F0EA"><use href="#pt-mark" x="0" y="0" width="24" height="24"></use></svg>
+                <span style="font: 400 12px/1 -apple-system, system-ui, sans-serif; color: #A29E93">Thu 9:41</span>
+              </div>
+              <div style="height: 28px; background: #1C1B17; display: flex; align-items: center; justify-content: flex-end; gap: 14px; padding: 0 12px; border-top: 1px solid #26251F">
+                <span style="position: relative; display: inline-flex">
+                  <svg viewBox="0 0 24 24" style="width: 18px; height: 18px; color: #F2F0EA"><use href="#pt-mark" x="0" y="0" width="24" height="24"></use></svg>
+                  <span style="position: absolute; right: -2px; bottom: 0; width: 7px; height: 7px; border-radius: 99px; background: #D2371B; animation: ptPulse 1.6s ease-in-out infinite"></span>
+                </span>
+                <span style="font: 400 12px/1 -apple-system, system-ui, sans-serif; color: #A29E93">Thu 9:41</span>
+              </div>
+              <div style="height: 28px; background: #1C1B17; display: flex; align-items: center; justify-content: flex-end; gap: 14px; padding: 0 12px; border-top: 1px solid #26251F">
+                <svg viewBox="0 0 24 24" style="width: 18px; height: 18px; color: #F2F0EA"><use href="#pt-mark-heavy" x="0" y="0" width="24" height="24"></use></svg>
+                <span style="font: 400 12px/1 -apple-system, system-ui, sans-serif; color: #A29E93">Thu 9:41</span>
+              </div>
+            </div>
+            <span style="font: 400 11.5px/1.5 -apple-system, system-ui, sans-serif; color: #6E6B60; text-wrap: pretty">Idle, recording, patching — already what <span style="font-family: ui-monospace, 'SF Mono', monospace; font-size: 11px; color: #8C887E">MenuBarController</span> implements. No change needed.</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div style="display: flex; flex-wrap: wrap; gap: 44px; padding-top: 22px; border-top: 1px solid #2C2A23">
+    <div style="display: flex; flex-direction: column; gap: 8px; width: 300px">
+      <span style="font: 590 10.5px/1 -apple-system, system-ui, sans-serif; letter-spacing: 0.09em; text-transform: uppercase; color: #7E7A70">Palette</span>
+      <div style="display: flex; flex-direction: column; gap: 5px">
+        <div style="display: flex; align-items: center; gap: 9px"><span style="width: 15px; height: 15px; border-radius: 3px; background: #1C1B17; border: 1px solid #3A3730"></span><span style="font: 400 11.5px/1 ui-monospace, 'SF Mono', monospace; color: #8C887E">#1C1B17 window</span></div>
+        <div style="display: flex; align-items: center; gap: 9px"><span style="width: 15px; height: 15px; border-radius: 3px; background: #191813; border: 1px solid #3A3730"></span><span style="font: 400 11.5px/1 ui-monospace, 'SF Mono', monospace; color: #8C887E">#191813 sidebar</span></div>
+        <div style="display: flex; align-items: center; gap: 9px"><span style="width: 15px; height: 15px; border-radius: 3px; background: #24231D; border: 1px solid #3A3730"></span><span style="font: 400 11.5px/1 ui-monospace, 'SF Mono', monospace; color: #8C887E">#24231D raised</span></div>
+        <div style="display: flex; align-items: center; gap: 9px"><span style="width: 15px; height: 15px; border-radius: 3px; background: #F2F0EA"></span><span style="font: 400 11.5px/1 ui-monospace, 'SF Mono', monospace; color: #8C887E">#F2F0EA text</span></div>
+        <div style="display: flex; align-items: center; gap: 9px"><span style="width: 15px; height: 15px; border-radius: 3px; background: #A29E93"></span><span style="font: 400 11.5px/1 ui-monospace, 'SF Mono', monospace; color: #8C887E">#A29E93 secondary</span></div>
+        <div style="display: flex; align-items: center; gap: 9px"><span style="width: 15px; height: 15px; border-radius: 3px; background: #D2371B"></span><span style="font: 400 11.5px/1 ui-monospace, 'SF Mono', monospace; color: #8C887E">#D2371B signal</span></div>
+      </div>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 8px; width: 330px">
+      <span style="font: 590 10.5px/1 -apple-system, system-ui, sans-serif; letter-spacing: 0.09em; text-transform: uppercase; color: #7E7A70">Where red is allowed</span>
+      <p style="margin: 0; font: 400 13.5px/1.55 -apple-system, system-ui, sans-serif; color: #A29E93; text-wrap: pretty">The primary handoff button, the selected session, the <span style="color: #E4633F">me</span> speaker tag, and recording state. Nothing else. <span style="color: #D8D4CA">them</span> stays neutral on purpose — inventing a second accent for it would spend the one colour you have.</p>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 8px; width: 330px">
+      <span style="font: 590 10.5px/1 -apple-system, system-ui, sans-serif; letter-spacing: 0.09em; text-transform: uppercase; color: #7E7A70">Next</span>
+      <p style="margin: 0; font: 400 13.5px/1.55 -apple-system, system-ui, sans-serif; color: #A29E93; text-wrap: pretty">Pick <a href="#10a">10a</a>, <a href="#10b">10b</a> or <a href="#10c">10c</a> — or say which parts to combine; <a href="#10b">10b</a>'s toolbar button on <a href="#10c">10c</a>'s reading column is a real option. Then I'll draw the empty state, the transcribing state and the broken-session state to match, and write the SwiftUI notes for whichever you choose.</p>
+    </div>
+  </div>
+
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:3000,&quot;height&quot;:1400}}"></script>
+</body>
+</html>
