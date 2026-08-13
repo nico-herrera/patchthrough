@@ -45,6 +45,36 @@ function Assert-Checksum {
     Assert-True ($actual -eq $expected) "checksum mismatch for $Path"
 }
 
+function Assert-NoUnloadableNatives {
+    param(
+        [Parameter(Mandatory = $true)][string] $Root,
+        [Parameter(Mandatory = $true)][string] $Label
+    )
+
+    # Two ways a native library can ship that this build could never load, both of
+    # which the Whisper.net runtime packages have produced. They are dropped at
+    # publish time by the DropUnloadableNativeLibraries target in
+    # Patchthrough.Windows.csproj; this is the assertion that a package update
+    # cannot put them back without anyone noticing.
+
+    # Not a Windows binary at all. One release carried 61 MB of these.
+    $foreign = @(Get-ChildItem -LiteralPath $Root -Recurse -File -Include '*.so', '*.dylib')
+    $foreignNames = @($foreign | ForEach-Object { $_.Name })
+    Assert-True ($foreign.Count -eq 0) "$Label carries non-Windows native libraries: $($foreignNames -join ', ')"
+
+    # A Windows binary for the wrong architecture. A process loads the architecture
+    # it is, and on ARM64 Windows this one runs as emulated x64, so a win-x86 or
+    # win-arm64 directory is dead weight in every download. The pattern is "a
+    # win- path segment that is not win-x64", so it keeps catching new ones.
+    $wrongArchitecture = @(
+        Get-ChildItem -LiteralPath $Root -Recurse -File |
+            Where-Object { $_.FullName -match '[\\/]win-(?!x64[\\/])' }
+    )
+    $wrongNames = @($wrongArchitecture | ForEach-Object { $_.FullName.Substring($Root.Length).TrimStart('\\', '/') })
+    Assert-True ($wrongArchitecture.Count -eq 0) `
+        "$Label carries native libraries for another architecture: $($wrongNames -join ', ')"
+}
+
 function Invoke-Process {
     param(
         [Parameter(Mandatory = $true)][string] $Path,
@@ -76,15 +106,7 @@ try {
     # The window ships WPF, so the desktop runtime is redistributed and its
     # licence travels with it.
     Assert-True (Test-Path -LiteralPath (Join-Path $expanded 'DOTNET-WINDOWSDESKTOP-LICENSE.txt') -PathType Leaf) 'portable ZIP has no .NET desktop license'
-    # Whisper.net.Runtime.Vulkan once added its Linux natives to a win-x64
-    # publish, which put 61 MB of unloadable ELF objects in the download. This
-    # build is not single-file, so the Windows natives are loose .dll files
-    # beside the executables and are expected; a loose .so or .dylib is not.
-    # Assert-True evaluates its message eagerly, and strict mode rejects a
-    # property read on an empty array, so name the files in a separate step.
-    $foreign = @(Get-ChildItem -LiteralPath $expanded -Recurse -File -Include '*.so', '*.dylib')
-    $foreignNames = @($foreign | ForEach-Object { $_.Name })
-    Assert-True ($foreign.Count -eq 0) "portable ZIP carries non-Windows native libraries: $($foreignNames -join ', ')"
+    Assert-NoUnloadableNatives -Root $expanded -Label 'portable ZIP'
     if (-not [string]::IsNullOrWhiteSpace($ExpectedVersion)) {
         foreach ($versioned in @($portableExe, $portableApp)) {
             $actualVersion = [System.Diagnostics.FileVersionInfo]::GetVersionInfo($versioned).ProductVersion
@@ -111,12 +133,9 @@ try {
     $installedApp = Join-Path $installed 'PatchthroughApp.exe'
     Assert-True (Test-Path -LiteralPath $installedExe -PathType Leaf) 'installer did not install Patchthrough.exe'
     Assert-True (Test-Path -LiteralPath $installedApp -PathType Leaf) 'installer did not install PatchthroughApp.exe'
-    # The installer copies the same publish directory, so it repeats any stray
-    # native library the ZIP carries. Its [Files] section selects those files on
-    # its own, so assert the installed tree separately.
-    $installedForeign = @(Get-ChildItem -LiteralPath $installed -Recurse -File -Include '*.so', '*.dylib')
-    $installedForeignNames = @($installedForeign | ForEach-Object { $_.Name })
-    Assert-True ($installedForeign.Count -eq 0) "installer carries non-Windows native libraries: $($installedForeignNames -join ', ')"
+    # The installer's [Files] section selects what it copies, so the installed tree
+    # is asserted separately rather than assumed to match the ZIP.
+    Assert-NoUnloadableNatives -Root $installed -Label 'installer'
     Invoke-Process $installedExe
 
     $appPath = 'Registry::HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\App Paths\Patchthrough.exe'

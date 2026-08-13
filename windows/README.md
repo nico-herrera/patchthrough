@@ -210,6 +210,14 @@ two minutes, and play audio only in the middle minute.
 once. Verify them against a recorded hash, the way `packaging/verify-models.sh`
 does for macOS.
 
+**The transcription packages ship natives this build cannot load.** Whisper.net's
+runtime packages add Linux, 32-bit Windows and ARM64 Windows binaries without
+conditioning them on the target runtime, and one release shipped 61 MB of Linux
+objects before anyone noticed. `DropUnloadableNativeLibraries` in
+`Patchthrough.Windows.csproj` removes anything whose architecture is not this
+build's, and `verify-release.ps1` asserts the result so a package update cannot put
+them back quietly.
+
 **Windows N editions have no AAC encoder.** Report it in the doctor check, and
 fall back to PCM in WAV. The `files` map makes that legal.
 
