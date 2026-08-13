@@ -1,0 +1,61 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- WinExe, not Exe. A console subsystem executable flashes a console
+         window every time Windows starts it at sign-in. -->
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <!-- A separate name from Patchthrough.exe, which stays the console tool.
+         Two executables share one publish directory: the console verbs keep
+         working from a shell, and neither one carries the other's compromise.
+         See windows/README.md. -->
+    <AssemblyName>PatchthroughApp</AssemblyName>
+    <RootNamespace>Patchthrough.App</RootNamespace>
+    <Product>Patchthrough</Product>
+    <Description>Record meetings and transcribe them entirely on this Windows PC.</Description>
+    <Company>Nico Herrera</Company>
+    <Copyright>Copyright © Nico Herrera</Copyright>
+    <ApplicationIcon>..\..\packaging\patchthrough.ico</ApplicationIcon>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <UseWPF>true</UseWPF>
+    <!-- Windows Forms is here for one type, NotifyIcon. Windows has no WPF tray
+         icon, and the alternative is a package to wrap the same Win32 calls.
+         See windows/README.md for why a native tray menu is the wanted shape. -->
+    <UseWindowsForms>true</UseWindowsForms>
+    <!-- Lets this project compile on macOS and Linux, XAML included. It cannot
+         run there, but a compile catches every wrong API name and signature,
+         and day to day development happens on a Mac. -->
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <!-- WFAC010 tells a Windows Forms project to declare its DPI mode through
+         ApplicationHighDpiMode instead of the manifest. That property works by
+         calling Application.SetHighDpiMode at startup, which needs a Windows
+         Forms message loop this app never starts. WPF reads DPI awareness from
+         the manifest, before any code runs, so the manifest is the only place
+         that can be right here. The analyzer is judging the wrong framework. -->
+    <NoWarn>$(NoWarn);WFAC010</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Windows Forms and System.Drawing are not imported everywhere, even
+         though UseWindowsForms adds them by default. They collide with WPF on
+         the names this app uses constantly: Application, Color, Point, Size,
+         FontFamily. WPF is the framework here, so it wins the plain names, and
+         the few files that touch a tray icon import Forms with an alias. -->
+    <Using Remove="System.Windows.Forms" />
+    <Using Remove="System.Drawing" />
+    <!-- Named rather than left implicit. WPF compiles XAML through a generated
+         temporary project, and that project does not carry the SDK's implicit
+         usings, so System.IO resolves in a plain build and not in the markup
+         pass. Declaring it here puts it in both. -->
+    <Using Include="System.IO" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Patchthrough.Windows\Patchthrough.Windows.csproj" />
+  </ItemGroup>
+
+</Project>

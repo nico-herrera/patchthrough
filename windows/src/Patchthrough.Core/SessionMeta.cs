@@ -22,6 +22,22 @@ public sealed class SessionMeta
     public string? Name { get; init; }
 
     /// <summary>
+    /// The instant every transcript timestamp is measured from: the first audio
+    /// buffer of whichever track delivered one first.
+    ///
+    /// This is not the same as <see cref="Started"/>, and the difference is not
+    /// small. `Started` is stamped before the capture devices are opened, and
+    /// opening them takes a variable amount of time. Anything converting a
+    /// wall-clock instant into transcript time has to subtract this value, not
+    /// `Started`, or it lands late by that latency. Notes are the thing that
+    /// converts, so this is what makes a note point at the line it was about.
+    ///
+    /// Null on a session recorded before this key existed. Falling back to
+    /// `Started` is documented as approximate in schemas/session-v1.md.
+    /// </summary>
+    public DateTimeOffset? AudioStart { get; init; }
+
+    /// <summary>
     /// The tracks in the order the coordinator transcribes them. The mic is
     /// `me` and the system track is `them`, exactly as on macOS.
     /// </summary>
@@ -52,11 +68,10 @@ public sealed class SessionMeta
 
         // Added in alphabetical order, because System.Text.Json writes
         // properties in insertion order and has no sorting option.
-        var root = new JsonObject
-        {
-            ["clean_stop"] = CleanStop,
-            ["duration_seconds"] = DurationSeconds,
-        };
+        var root = new JsonObject();
+        if (AudioStart is not null) root["audio_start"] = Iso8601Millis(AudioStart.Value);
+        root["clean_stop"] = CleanStop;
+        root["duration_seconds"] = DurationSeconds;
         if (Ended is not null) root["ended"] = Iso8601(Ended.Value);
         root["files"] = files;
         if (!string.IsNullOrWhiteSpace(Name)) root["name"] = Name;
@@ -114,7 +129,41 @@ public sealed class SessionMeta
             Files = files,
             StartOffsetMs = offsets,
             Name = string.IsNullOrEmpty(name) ? null : name,
+            AudioStart = ReadDate(root["audio_start"]),
         };
+    }
+
+    /// <summary>
+    /// Name or rename a session, or remove the name with null.
+    ///
+    /// This edits the file in place instead of reading a
+    /// <see cref="SessionMeta"/> and writing it back. A round trip through this
+    /// class keeps only the keys it models, and a macOS-written meta.json can
+    /// carry keys a Windows build has never heard of, `audio_start` among them.
+    /// Renaming a meeting must not silently drop them.
+    /// </summary>
+    public static void UpdateName(string sessionDirectory, string? name)
+    {
+        var path = Path.Combine(sessionDirectory, "meta.json");
+        if (JsonNode.Parse(File.ReadAllText(path)) is not JsonObject root)
+        {
+            throw new JsonException($"can't parse {path}");
+        }
+
+        var trimmed = name?.Trim();
+        if (string.IsNullOrEmpty(trimmed)) root.Remove("name");
+        else root["name"] = trimmed;
+
+        // Rebuilt in alphabetical order for the same reason ToJson inserts in
+        // that order: System.Text.Json writes insertion order, and a Windows
+        // session should stay diffable against a macOS one.
+        var sorted = new JsonObject();
+        foreach (var pair in root.OrderBy(p => p.Key, StringComparer.Ordinal))
+        {
+            sorted[pair.Key] = pair.Value?.DeepClone();
+        }
+
+        AtomicFile.WriteText(path, sorted.ToJsonString(new JsonSerializerOptions { WriteIndented = true }));
     }
 
     private static DateTimeOffset? ReadDate(JsonNode? node) =>
@@ -129,4 +178,13 @@ public sealed class SessionMeta
     /// </summary>
     internal static string Iso8601(DateTimeOffset value) =>
         value.ToUniversalTime().ToString("yyyy-MM-dd'T'HH:mm:ss'Z'", System.Globalization.CultureInfo.InvariantCulture);
+
+    /// <summary>
+    /// Millisecond precision, in UTC. The audio anchor needs it: device startup
+    /// latency has been measured between 0.19 and 1.64 seconds, so a value rounded
+    /// to the second would throw away most of what this key exists to record.
+    /// </summary>
+    internal static string Iso8601Millis(DateTimeOffset value) =>
+        value.ToUniversalTime().ToString(
+            "yyyy-MM-dd'T'HH:mm:ss.fff'Z'", System.Globalization.CultureInfo.InvariantCulture);
 }

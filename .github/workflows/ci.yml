@@ -58,6 +58,21 @@ jobs:
       - name: Verify session contract
         shell: pwsh
         run: windows/verify-contract.ps1
+      # The interface is written on macOS, where WPF compiles but cannot run, so a
+      # compile proves nothing about how it looks. This renders every pane to PNG
+      # from fixture sessions and uploads them, which is the only place the layout,
+      # the palette, and the type sizes can actually be reviewed.
+      - name: Render interface screenshots
+        shell: pwsh
+        env:
+          PATCHTHROUGH_UI_SCREENSHOT: ${{ runner.temp }}/ui-screenshots
+        run: dotnet run --project windows/src/Patchthrough.App -c Release --no-build
+      - name: Upload interface screenshots
+        uses: actions/upload-artifact@v4
+        with:
+          name: Patchthrough-windows-ui
+          path: ${{ runner.temp }}/ui-screenshots/*.png
+          if-no-files-found: error
       - name: Install verified Inno Setup compiler
         uses: ./.github/actions/inno-setup
         with:

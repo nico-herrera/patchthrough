@@ -59,11 +59,24 @@ public sealed class SessionWriter
     /// </summary>
     public void WriteProvisionalMeta(DateTimeOffset? now = null) => Write(null, now, null);
 
-    /// <summary>Rewrite meta.json with the real end time and the offsets.</summary>
-    public void WriteFinalMeta(DateTimeOffset? endedAt = null, string? name = null) =>
-        Write(endedAt ?? DateTimeOffset.Now, null, name);
+    /// <summary>
+    /// Rewrite meta.json with the real end time and the offsets.
+    /// </summary>
+    /// <param name="audioStart">
+    /// The instant of the first audio buffer across both tracks, which is the zero
+    /// every transcript timestamp is measured from. The recorder already computes it
+    /// to derive the per-track offsets; persisting it is what lets a note typed
+    /// during the meeting be placed on the transcript's clock afterwards. Without
+    /// it a reader has to fall back to `started`, which is stamped before the
+    /// devices open and therefore lands late.
+    /// </param>
+    public void WriteFinalMeta(
+        DateTimeOffset? endedAt = null,
+        string? name = null,
+        DateTimeOffset? audioStart = null) =>
+        Write(endedAt ?? DateTimeOffset.Now, null, name, audioStart);
 
-    private void Write(DateTimeOffset? ended, DateTimeOffset? now, string? name)
+    private void Write(DateTimeOffset? ended, DateTimeOffset? now, string? name, DateTimeOffset? audioStart = null)
     {
         var end = ended ?? now ?? DateTimeOffset.Now;
         new SessionMeta
@@ -75,6 +88,7 @@ public sealed class SessionWriter
             Files = new Dictionary<string, string>(_files),
             StartOffsetMs = new Dictionary<string, int>(_offsets),
             Name = name,
+            AudioStart = audioStart,
         }.Write(Directory);
     }
 }

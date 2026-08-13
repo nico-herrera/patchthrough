@@ -16,7 +16,7 @@ public sealed class WhisperEngine(WhisperModelStore? models = null) : ITranscrip
     public async Task PrepareAsync(CancellationToken cancellationToken = default)
     {
         if (_factory is not null) return;
-        var path = await _models.EnsureAsync(cancellationToken);
+        var path = await _models.EnsureAsync(cancellationToken: cancellationToken);
         RuntimeOptions.RuntimeLibraryOrder =
             [RuntimeLibrary.Vulkan, RuntimeLibrary.Cpu, RuntimeLibrary.CpuNoAvx];
         _factory = WhisperFactory.FromPath(path);

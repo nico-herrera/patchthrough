@@ -184,6 +184,69 @@ public sealed class ContractTests : IDisposable
     }
 
     [Fact]
+    public void RenamingASessionKeepsEveryKeyItDoesNotOwn()
+    {
+        var directory = Path.Combine(_root, "2026.08.03-1400");
+        Directory.CreateDirectory(directory);
+        // audio_start is written by the macOS recorder and is the anchor every
+        // note resolves against. A Windows build that does not model a key must
+        // still not drop it: the same session folder is read on both platforms.
+        File.WriteAllText(Path.Combine(directory, "meta.json"), """
+        {
+          "audio_start": "2026-08-03T14:00:01.500Z",
+          "clean_stop": true,
+          "duration_seconds": 92,
+          "files": { "mic": "mic.m4a" },
+          "start_offset_ms": { "mic": 0 },
+          "started": "2026-08-03T14:00:00Z"
+        }
+        """);
+
+        SessionMeta.UpdateName(directory, "Windows port kickoff");
+
+        var root = JsonNode.Parse(File.ReadAllText(Path.Combine(directory, "meta.json")))!.AsObject();
+        Assert.Equal("Windows port kickoff", (string?)root["name"]);
+        Assert.Equal("2026-08-03T14:00:01.500Z", (string?)root["audio_start"]);
+        Assert.Equal(92, (int?)root["duration_seconds"]);
+        Assert.Equal("mic.m4a", (string?)root["files"]!["mic"]);
+        // Keys stay sorted, so a Windows session diffs against a macOS one.
+        Assert.Equal(
+            ["audio_start", "clean_stop", "duration_seconds", "files", "name", "start_offset_ms", "started"],
+            root.Select(pair => pair.Key));
+    }
+
+    [Fact]
+    public void RemovingAMeetingNameDropsTheKeyRatherThanBlankingIt()
+    {
+        var writer = SessionWriter.Create(_root, new DateTimeOffset(2026, 8, 3, 14, 0, 0, TimeSpan.Zero));
+        writer.AddTrack("mic", "mic.m4a");
+        writer.WriteFinalMeta(new DateTimeOffset(2026, 8, 3, 14, 1, 32, TimeSpan.Zero));
+
+        SessionMeta.UpdateName(writer.Directory, "Named");
+        SessionMeta.UpdateName(writer.Directory, null);
+
+        // An empty name would render as a blank title everywhere instead of
+        // falling back to the folder timestamp.
+        Assert.Null(SessionMeta.Read(writer.Directory).Name);
+        Assert.False(JsonNode.Parse(File.ReadAllText(Path.Combine(writer.Directory, "meta.json")))!
+            .AsObject().ContainsKey("name"));
+    }
+
+    [Theory]
+    [InlineData("  Padded  ", "Padded")]
+    [InlineData("   ", null)]
+    public void AMeetingNameIsTrimmedAndBlankMeansNoName(string given, string? expected)
+    {
+        var writer = SessionWriter.Create(_root, new DateTimeOffset(2026, 8, 3, 14, 0, 0, TimeSpan.Zero));
+        writer.AddTrack("mic", "mic.m4a");
+        writer.WriteFinalMeta(new DateTimeOffset(2026, 8, 3, 14, 1, 32, TimeSpan.Zero));
+
+        SessionMeta.UpdateName(writer.Directory, given);
+
+        Assert.Equal(expected, SessionMeta.Read(writer.Directory).Name);
+    }
+
+    [Fact]
     public void AtomicWriteLeavesNoTemporaryFileBehind()
     {
         var target = Path.Combine(_root, "transcript.md");

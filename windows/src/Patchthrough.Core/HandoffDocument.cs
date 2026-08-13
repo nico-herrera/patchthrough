@@ -25,7 +25,15 @@ public static class HandoffDocument
     /// Instructions that travel inside every handoff document. Keep in step
     /// with `taskInstructions` in Handoff.swift and in the CLI.
     /// </summary>
-    public static string TaskInstructions =>
+    public static string TaskInstructions => Instructions(hasNotes: false);
+
+    /// <summary>
+    /// The instructions, with one extra clause when the document carries notes.
+    ///
+    /// A document with no notes must not mention them: telling an agent to weigh
+    /// something that is not there reads as a missing attachment.
+    /// </summary>
+    public static string Instructions(bool hasNotes) =>
         "Read the transcript below and work out what this meeting asks of me. "
         + "Before changing anything, give me:\n"
         + "\n"
@@ -34,7 +42,42 @@ public static class HandoffDocument
         + "3. Anything ambiguous or contradictory, and anything that reads like a transcription error. Ask me rather than guess.\n"
         + "4. Anything discussed that the current project may already do or contradict.\n"
         + "\n"
-        + AsrCaveat + " Don't edit anything until we've agreed the list.";
+        + AsrCaveat + " Don't edit anything until we've agreed the list."
+        + (hasNotes
+            ? "\n"
+                + "\n"
+                + "My own notes are above the transcript. They are what I thought mattered "
+                + "while it was happening, so use them to decide what to lead with. Where a "
+                + "note and the transcript disagree, the transcript is what was said. "
+                + "Prioritize by the notes, but do not override the record with them."
+            : "");
+
+    /// <summary>
+    /// The user's own notes, above the transcript because that is the order a reader
+    /// needs them in: what a human flagged, then the record it points at.
+    ///
+    /// Absent notes produce no heading and no blank line. An empty "## Notes" would
+    /// claim the user wrote nothing worth saying, rather than that the session has no
+    /// notes file at all. The same rule the disclosure line follows.
+    /// </summary>
+    public static string NotesSection(IReadOnlyList<ResolvedNote> notes)
+    {
+        if (notes.Count == 0) return "";
+
+        var lines = notes.Select(note => note.Clock is null
+            // No anchor, so no position. Rendering it at 0:00 would send a reader to
+            // the opening line of a meeting the note has nothing to do with.
+            ? $"- {note.Text}"
+            : $"- **[{note.Clock}]** {note.Text}");
+
+        return "\n"
+            + "## Notes\n"
+            + "\n"
+            + "What I typed while this was happening, in my own words. Nothing here was "
+            + "generated or summarized. The timestamps point into the transcript below.\n"
+            + "\n"
+            + string.Join("\n", lines) + "\n";
+    }
 
     /// <summary>
     /// Build the document. `transcriptMarkdown` is the content of
@@ -46,8 +89,10 @@ public static class HandoffDocument
         string transcriptMarkdown,
         int durationSeconds,
         bool cleanStop,
-        string? name)
+        string? name,
+        IReadOnlyList<ResolvedNote>? notes = null)
     {
+        notes ??= [];
         var displayName = string.IsNullOrWhiteSpace(name)
             ? new DirectoryInfo(sessionDirectory).Name
             : name;
@@ -70,7 +115,7 @@ public static class HandoffDocument
 
         ## Instructions
 
-        {TaskInstructions}
+        {Instructions(notes.Count > 0)}
 
         ## Recording
 
@@ -78,7 +123,7 @@ public static class HandoffDocument
         - Speakers: `me` is this machine's microphone. `them` is the audio this machine played, which is the other side of the call. These are channels, not verified identities: echo can put the wrong label on a line.
         - Transcribed on-device. **Expect transcription errors**, especially in proper nouns, identifiers and technical terms. If a term looks wrong but is phonetically close to something plausible, it probably is that.
         - Source: `{sessionDirectory}`
-
+        {NotesSection(notes)}
         ## Transcript
 
         {body}
@@ -96,7 +141,10 @@ public static class HandoffDocument
         string? name)
     {
         var transcript = File.ReadAllText(Path.Combine(sessionDirectory, "transcript.md"));
-        var document = Build(sessionDirectory, transcript, durationSeconds, cleanStop, name);
+        // The notes are read here rather than passed in, so every writer of this
+        // document picks them up without having to know they exist.
+        var notes = SessionNotes.Resolved(sessionDirectory);
+        var document = Build(sessionDirectory, transcript, durationSeconds, cleanStop, name, notes);
         AtomicFile.WriteText(Path.Combine(sessionDirectory, "handoff.md"), document);
     }
 

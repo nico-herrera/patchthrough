@@ -34,6 +34,20 @@ public sealed class TrackRecorder : IDisposable
 
     public Exception? Failure { get; private set; }
 
+    /// <summary>
+    /// The capture died on its own, which on Windows usually means the device
+    /// went away: a Bluetooth headset connected mid-meeting, or a USB microphone
+    /// was unplugged.
+    ///
+    /// This exists alongside <see cref="Failure"/> because the property is only
+    /// read at stop time, and a meeting can run for an hour after the microphone
+    /// stops. An hour of silence the user could have fixed in seconds is the
+    /// failure worth interrupting them for.
+    ///
+    /// **Raised on the capture thread**, so a UI subscriber has to marshal.
+    /// </summary>
+    public event Action<Exception>? Failed;
+
     public TrackRecorder(IWaveIn capture, Func<DateTimeOffset>? clock = null)
     {
         _capture = capture;
@@ -83,7 +97,15 @@ public sealed class TrackRecorder : IDisposable
         }
     }
 
-    private void OnRecordingStopped(object? sender, StoppedEventArgs e) => Failure ??= e.Exception;
+    private void OnRecordingStopped(object? sender, StoppedEventArgs e)
+    {
+        // NAudio raises this on a clean Stop() too, with no exception. Only a
+        // real fault is a failure, or every recording would report one.
+        if (e.Exception is null) return;
+        var first = Failure is null;
+        Failure ??= e.Exception;
+        if (first) Failed?.Invoke(e.Exception);
+    }
 
     /// <summary>
     /// Write silence up to where the wall clock says this track should be.

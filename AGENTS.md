@@ -61,9 +61,13 @@ on-disk session format (`schemas/session-v1.md`):
 - `cli/` — the npm package: `bin/patchthrough.js` (executable arg parser),
   `src/patchthrough.js` (library: sessions, staging, agents, web targets),
   `test/patchthrough.test.js` (node:test), `verify.js` (package invariants).
-- `windows/` — `Patchthrough.Core` (portable session/transcription logic),
-  `Patchthrough.Windows` (WASAPI, AAC, model adapters, console entry point),
+- `windows/` — `Patchthrough.Core` (portable session/transcription logic, the
+  session index, the config writer, the transcription queue),
+  `Patchthrough.Windows` (WASAPI, AAC, model adapters, recording and doctor
+  services, console entry point), `Patchthrough.App` (WPF tray icon and window),
   xUnit tests, the cross-platform session fixture, and Windows release tooling.
+  A publish of `Patchthrough.App` emits both `Patchthrough.exe` (console) and
+  `PatchthroughApp.exe` (window) into one self-contained directory.
   `windows/Directory.Build.props` enables NuGet lock files and locked restore
   for every project. `windows/packaging/` builds the self-contained x64 ZIP and
   per-user installer.

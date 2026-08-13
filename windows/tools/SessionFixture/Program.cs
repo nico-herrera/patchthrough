@@ -23,7 +23,20 @@ File.WriteAllBytes(session.PathFor("mic.m4a"), []);
 File.WriteAllBytes(session.PathFor("system.m4a"), []);
 
 session.WriteProvisionalMeta(startedAt);
-session.WriteFinalMeta(startedAt.AddSeconds(92));
+// The audio anchor, 1.2 seconds after the session was created. A real recorder
+// measures it; here it is stated so the notes below land on known timestamps.
+var audioStart = startedAt.AddMilliseconds(1200);
+session.WriteFinalMeta(startedAt.AddSeconds(92), audioStart: audioStart);
+
+// Notes the user typed during the meeting. These are in the fixture so that
+// verify-contract.sh compares the Notes section against the real npm CLI's
+// rendering of the same file, rather than only asserting it locally. The section
+// is prose shared by three implementations, so byte equality is the contract.
+SessionNotes.Write(session.Directory,
+[
+    new Note(audioStart.AddMilliseconds(9_400), "Windows recorder ships before the installer."),
+    new Note(audioStart.AddMilliseconds(62_100), "Friday review. Hold the session format."),
+]);
 
 await using var engine = new StubEngine();
 await new TranscriptionPipeline(engine, TextWriter.Null).RunAsync(session.Directory);
