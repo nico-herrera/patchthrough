@@ -59,6 +59,12 @@ dotnet test              # the session format and the padding arithmetic
 ./verify-contract.sh     # writes a session, then reads it with the npm CLI
 ```
 
+`node tools/verify-xaml-bindings.mjs` is worth running after any change to the
+window. WPF resolves a binding path at run time, so a mistyped one compiles and
+then renders an empty control, and this interface is written on a machine that
+cannot run it. The check reads the XAML and the viewmodels and fails when a path
+has nowhere to land.
+
 `verify-contract.sh` is the interesting one. It generates a session with the
 real `Patchthrough.Core` code path and hands it to `cli/bin/patchthrough.js`,
 which is the definition of done for milestone 1.

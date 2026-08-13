@@ -75,7 +75,10 @@ on-disk session format (`schemas/session-v1.md`):
   consensus, and corpus-run tests.
 - `models/registry.json` — cross-platform model metadata, size budgets, hashes,
   and system-asset declarations. `tools/verify-contracts.mjs` validates it with
-  the shared transcript and quality fixtures.
+  the shared transcript and quality fixtures. `tools/verify-xaml-bindings.mjs`
+  checks that every binding path in the Windows app's XAML names a member that
+  exists, which the compiler cannot: WPF resolves a path at run time, so a typo
+  renders an empty control instead of failing.
 - `quality/` — corrected-corpus schemas, fixtures, release-gate scoring, corpus
   bootstrap, and the private browser review-packet generator. Do not commit
   private corpus audio or generated review packets.
@@ -132,6 +135,7 @@ or quality changes:
 
 ```bash
 node tools/verify-contracts.mjs
+node tools/verify-xaml-bindings.mjs
 node quality/score.mjs --manifest quality/fixtures/corpus.json \
   --candidate quality/fixtures/candidate.json \
   --baseline quality/fixtures/baseline.json --out /tmp/patchthrough-score.json
