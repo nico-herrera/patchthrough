@@ -23,7 +23,7 @@
          rather than restating the label. -->
     <Style x:Key="SettingCard" TargetType="Border">
       <Setter Property="Background" Value="{x:Static th:PT+C.RaisedBrush}" />
-      <Setter Property="CornerRadius" Value="{x:Static th:PT+M.CardRadius}" />
+      <Setter Property="CornerRadius" Value="{x:Static th:PT+R.Card}" />
       <Setter Property="Padding" Value="{x:Static th:PT+T.SettingsField}" />
       <Setter Property="Margin" Value="0,0,0,8" />
     </Style>
@@ -73,9 +73,9 @@
 
     <!-- Body -->
     <ScrollViewer Grid.Row="1" MaxHeight="{x:Static th:PT+M.SheetBodyMaxHeight}">
-      <StackPanel Margin="{x:Static th:PT+M.SheetPadH}">
+      <StackPanel Margin="{x:Static th:PT+T.SheetBody}">
 
-        <c:TrackedText Text="Recordings" Uppercase="True" Margin="0,{x:Static th:PT+M.SheetSectionGap},0,8" />
+        <c:TrackedText Text="Recordings" Uppercase="True" Margin="{x:Static th:PT+T.SheetSection}" />
 
         <Border Style="{StaticResource SettingCard}">
           <StackPanel>
@@ -108,7 +108,7 @@
           </Grid>
         </Border>
 
-        <c:TrackedText Text="Transcription" Uppercase="True" Margin="0,{x:Static th:PT+M.SheetSectionGap},0,8" />
+        <c:TrackedText Text="Transcription" Uppercase="True" Margin="{x:Static th:PT+T.SheetSection}" />
 
         <Border Style="{StaticResource SettingCard}">
           <Grid>
@@ -157,7 +157,7 @@
           </StackPanel>
         </Border>
 
-        <c:TrackedText Text="Notes" Uppercase="True" Margin="0,{x:Static th:PT+M.SheetSectionGap},0,8" />
+        <c:TrackedText Text="Notes" Uppercase="True" Margin="{x:Static th:PT+T.SheetSection}" />
 
         <Border Style="{StaticResource SettingCard}">
           <Grid>
@@ -174,7 +174,7 @@
           </Grid>
         </Border>
 
-        <c:TrackedText Text="Projects" Uppercase="True" Margin="0,{x:Static th:PT+M.SheetSectionGap},0,8" />
+        <c:TrackedText Text="Projects" Uppercase="True" Margin="{x:Static th:PT+T.SheetSection}" />
 
         <Border Style="{StaticResource SettingCard}">
           <StackPanel>

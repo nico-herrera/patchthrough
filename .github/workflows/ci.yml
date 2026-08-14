@@ -23,6 +23,11 @@ jobs:
       # Windows interface is written on macOS.
       - name: Verify XAML binding paths
         run: node tools/verify-xaml-bindings.mjs
+      # x:Static assigns without a type converter, so a design token with the
+      # wrong type compiles everywhere and throws when the BAML loads, on
+      # Windows only. The first CI render of the interface found exactly that.
+      - name: Verify XAML value types
+        run: node tools/verify-xaml-values.mjs
       - name: Exercise release-gate scorer
         run: node quality/score.mjs --manifest quality/fixtures/corpus.json --candidate quality/fixtures/candidate.json --baseline quality/fixtures/baseline.json --out /tmp/patchthrough-score.json
       - name: Test private review packet generator
@@ -52,6 +57,11 @@ jobs:
       # Windows interface is written on macOS.
       - name: Verify XAML binding paths
         run: node tools/verify-xaml-bindings.mjs
+      # x:Static assigns without a type converter, so a design token with the
+      # wrong type compiles everywhere and throws when the BAML loads, on
+      # Windows only. The first CI render of the interface found exactly that.
+      - name: Verify XAML value types
+        run: node tools/verify-xaml-values.mjs
       - name: Exercise release-gate scorer
         run: node quality/score.mjs --manifest quality/fixtures/corpus.json --candidate quality/fixtures/candidate.json --baseline quality/fixtures/baseline.json --out patchthrough-score.json
       - name: Test private review packet generator

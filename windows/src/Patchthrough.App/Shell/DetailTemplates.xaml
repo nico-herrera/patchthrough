@@ -17,7 +17,7 @@
   <DataTemplate x:Key="NoteRow" DataType="{x:Type core:ResolvedNote}">
     <Grid Margin="{x:Static th:PT+T.NoteRow}">
       <Grid.ColumnDefinitions>
-        <ColumnDefinition Width="{x:Static th:PT+M.NotesGutterWidth}" />
+        <ColumnDefinition Width="{x:Static th:PT+G.NotesGutter}" />
         <ColumnDefinition Width="*" />
       </Grid.ColumnDefinitions>
       <TextBlock Style="{StaticResource PT.Text.MonoTiny}" Text="{Binding Clock}"
@@ -86,7 +86,7 @@
                      Foreground="{x:Static th:PT+C.SignalLitBrush}" />
         </StackPanel>
         <Border Background="{x:Static th:PT+C.SurfaceBrush}"
-                CornerRadius="{x:Static th:PT+M.BubbleRadius}"
+                CornerRadius="{x:Static th:PT+R.Bubble}"
                 Padding="{x:Static th:PT+T.Bubble}">
           <TextBlock Style="{StaticResource PT.Text.Transcript}" Text="{Binding Text}" />
         </Border>

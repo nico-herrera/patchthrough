@@ -411,6 +411,64 @@ public static class PT
         /// <summary>Sidebar content, inset from the column edges.</summary>
         public static readonly Thickness SidebarHorizontal = new(M.SidebarPad, 0, M.SidebarPad, 0);
 
+        /// <summary>The search well's inset from the sidebar edges.</summary>
+        public static readonly Thickness SidebarPad = new(M.SidebarPad);
+
+        /// <summary>The settings sheet's scrolling body.</summary>
+        public static readonly Thickness SheetBody = new(M.SheetPadH);
+
+        /// <summary>A settings section heading: the gap above a section, and
+        /// the small one to its first card.</summary>
+        public static readonly Thickness SheetSection = new(0, M.SheetSectionGap, 0, 8);
+
+        /// <summary>Inside a drawn menu, around its rows.</summary>
+        public static readonly Thickness MenuPad = new(M.MenuPadding);
+
         public static readonly Thickness None = new(0);
+    }
+
+    /// <summary>
+    /// Corner radii, typed. These exist for the same reason <see cref="T"/>
+    /// does, and the reason is worth stating because it cost a CI run to
+    /// learn: `CornerRadius="7"` works in XAML because a string goes through
+    /// the type converter, but `CornerRadius="{x:Static …}"` assigns the
+    /// value directly, and a raw double is not a CornerRadius. That mismatch
+    /// compiles everywhere and throws at load, on Windows only. Every token a
+    /// XAML CornerRadius consumes therefore lives here with the right type,
+    /// and tools/verify-xaml-values.mjs refuses the double form.
+    /// </summary>
+    public static class R
+    {
+        public static readonly CornerRadius Bubble = new(M.BubbleRadius);
+        public static readonly CornerRadius Row = new(M.RowRadius);
+        public static readonly CornerRadius Control = new(M.ControlRadius);
+
+        /// <summary>The right half of the split button: square against the
+        /// send half, rounded on the outside.</summary>
+        public static readonly CornerRadius ControlRight = new(0, M.ControlRadius, M.ControlRadius, 0);
+
+        public static readonly CornerRadius Field = new(M.FieldRadius);
+        public static readonly CornerRadius Card = new(M.CardRadius);
+        public static readonly CornerRadius Menu = new(M.MenuRadius);
+        public static readonly CornerRadius MenuRow = new(M.MenuRowRadius);
+
+        /// <summary>The switch is a pill: the radius is the full track
+        /// height, and WPF clamps it to the half-height it can draw.</summary>
+        public static readonly CornerRadius SwitchTrack = new(M.SwitchTrackHeight);
+        public static readonly CornerRadius SwitchKnob = new(M.SwitchKnobSize);
+    }
+
+    /// <summary>
+    /// Grid lengths, typed, for the same load-time reason as <see cref="R"/>:
+    /// a ColumnDefinition fed a raw double via x:Static throws when the BAML
+    /// loads.
+    /// </summary>
+    public static class G
+    {
+        /// <summary>The pinned sidebar column.</summary>
+        public static readonly GridLength SidebarColumn = new(M.SidebarWidth);
+
+        /// <summary>The notes list's timestamp gutter.</summary>
+        public static readonly GridLength NotesGutter = new(M.NotesGutterWidth);
     }
 }

@@ -83,7 +83,7 @@
            leading edge bar: that is design rule 4. -->
       <Border x:Name="Row" Background="Transparent" BorderThickness="{x:Static th:PT+T.Hairline}"
               BorderBrush="Transparent"
-              CornerRadius="{x:Static th:PT+M.RowRadius}"
+              CornerRadius="{x:Static th:PT+R.Row}"
               Padding="{x:Static th:PT+T.SidebarRowContent}">
         <Border.InputBindings>
           <MouseBinding MouseAction="LeftClick"
@@ -214,7 +214,7 @@
                   Background="{x:Static th:PT+C.RaisedBrush}"
                   BorderBrush="{x:Static th:PT+C.BorderBrush}"
                   BorderThickness="{x:Static th:PT+T.Hairline}"
-                  CornerRadius="{x:Static th:PT+M.ControlRadius}"
+                  CornerRadius="{x:Static th:PT+R.Control}"
                   Padding="{x:Static th:PT+T.Chip}"
                   ToolTip="Drag the transcript into another app"
                   MouseMove="OnDragChipMouseMove"
@@ -261,7 +261,7 @@
               <ColumnDefinition Width="Auto" />
               <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
-            <Border Grid.ColumnSpan="2" CornerRadius="{x:Static th:PT+M.ControlRadius}"
+            <Border Grid.ColumnSpan="2" CornerRadius="{x:Static th:PT+R.Control}"
                     Background="{x:Static th:PT+C.SignalBrush}" />
             <Button Grid.Column="0" Style="{StaticResource PT.Button.Primary}"
                     Command="{Binding SendCommand}"
@@ -286,7 +286,7 @@
                       <ControlTemplate TargetType="Button">
                         <Grid>
                           <Border x:Name="Fill" Background="{x:Static th:PT+C.SignalDimBrush}"
-                                  CornerRadius="0,{x:Static th:PT+M.ControlRadius},{x:Static th:PT+M.ControlRadius},0" />
+                                  CornerRadius="{x:Static th:PT+R.ControlRight}" />
                           <!-- A hairline of the on-signal colour divides the halves,
                                so the two jobs read as two controls. -->
                           <Rectangle Width="{x:Static th:PT+M.Hairline}" HorizontalAlignment="Left"
@@ -335,7 +335,7 @@
     <!-- Body -->
     <Grid Grid.Row="1">
       <Grid.ColumnDefinitions>
-        <ColumnDefinition Width="{x:Static th:PT+M.SidebarWidth}" />
+        <ColumnDefinition Width="{x:Static th:PT+G.SidebarColumn}" />
         <ColumnDefinition Width="*" />
       </Grid.ColumnDefinitions>
 
@@ -351,11 +351,11 @@
           </Grid.RowDefinitions>
 
           <!-- Search. -->
-          <Border Grid.Row="0" Margin="{x:Static th:PT+M.SidebarPad}"
+          <Border Grid.Row="0" Margin="{x:Static th:PT+T.SidebarPad}"
                   Background="{x:Static th:PT+C.RaisedBrush}"
                   BorderBrush="{x:Static th:PT+C.Border2Brush}"
                   BorderThickness="{x:Static th:PT+T.Hairline}"
-                  CornerRadius="{x:Static th:PT+M.FieldRadius}">
+                  CornerRadius="{x:Static th:PT+R.Field}">
             <Grid>
               <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto" />
@@ -477,8 +477,8 @@
               Background="{x:Static th:PT+C.RaisedBrush}"
               BorderBrush="{x:Static th:PT+C.MenuEdgeBrush}"
               BorderThickness="{x:Static th:PT+T.Hairline}"
-              CornerRadius="{x:Static th:PT+M.MenuRadius}"
-              Padding="{x:Static th:PT+M.MenuPadding}">
+              CornerRadius="{x:Static th:PT+R.Menu}"
+              Padding="{x:Static th:PT+T.MenuPad}">
         <Border.Effect>
           <DropShadowEffect BlurRadius="{x:Static th:PT+M.MenuShadowRadius}"
                             ShadowDepth="{x:Static th:PT+M.MenuShadowY}"
@@ -494,7 +494,7 @@
                   <ItemsControl.ItemTemplate>
                     <DataTemplate DataType="{x:Type vm:DestinationViewModel}">
                       <Border x:Name="Row" Background="Transparent"
-                              CornerRadius="{x:Static th:PT+M.MenuRowRadius}"
+                              CornerRadius="{x:Static th:PT+R.MenuRow}"
                               Padding="{x:Static th:PT+T.MenuRow}">
                         <Border.InputBindings>
                           <MouseBinding MouseAction="LeftClick"

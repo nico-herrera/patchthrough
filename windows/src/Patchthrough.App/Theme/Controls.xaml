@@ -196,7 +196,7 @@
         <ControlTemplate TargetType="Button">
           <Border x:Name="Fill"
                   Background="{x:Static th:PT+C.SignalBrush}"
-                  CornerRadius="{x:Static th:PT+M.ControlRadius}">
+                  CornerRadius="{x:Static th:PT+R.Control}">
             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"
                               Margin="{TemplateBinding Padding}" />
           </Border>
@@ -231,8 +231,8 @@
           <Border x:Name="Fill"
                   Background="{x:Static th:PT+C.ChipBrush}"
                   BorderBrush="{x:Static th:PT+C.BorderBrush}"
-                  BorderThickness="{x:Static th:PT+M.Hairline}"
-                  CornerRadius="{x:Static th:PT+M.ControlRadius}">
+                  BorderThickness="{x:Static th:PT+T.Hairline}"
+                  CornerRadius="{x:Static th:PT+R.Control}">
             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"
                               Margin="{TemplateBinding Padding}" />
           </Border>
@@ -288,7 +288,7 @@
       <Setter.Value>
         <ControlTemplate TargetType="Button">
           <Border x:Name="Fill" Background="{TemplateBinding Background}"
-                  CornerRadius="{x:Static th:PT+M.FieldRadius}">
+                  CornerRadius="{x:Static th:PT+R.Field}">
             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
           </Border>
           <ControlTemplate.Triggers>
@@ -316,7 +316,7 @@
     <Setter Property="SelectionOpacity" Value="0.35" />
     <Setter Property="Background" Value="{x:Static th:PT+C.SunkenBrush}" />
     <Setter Property="BorderBrush" Value="{x:Static th:PT+C.Border2Brush}" />
-    <Setter Property="BorderThickness" Value="{x:Static th:PT+M.Hairline}" />
+    <Setter Property="BorderThickness" Value="{x:Static th:PT+T.Hairline}" />
     <Setter Property="Padding" Value="{x:Static th:PT+T.TextField}" />
     <Setter Property="Template">
       <Setter.Value>
@@ -325,7 +325,7 @@
                   Background="{TemplateBinding Background}"
                   BorderBrush="{TemplateBinding BorderBrush}"
                   BorderThickness="{TemplateBinding BorderThickness}"
-                  CornerRadius="{x:Static th:PT+M.FieldRadius}">
+                  CornerRadius="{x:Static th:PT+R.Field}">
             <ScrollViewer x:Name="PART_ContentHost" Margin="{TemplateBinding Padding}"
                           VerticalScrollBarVisibility="Hidden" />
           </Border>
@@ -355,12 +355,12 @@
         <ControlTemplate TargetType="ToggleButton">
           <Border x:Name="Track"
                   Background="{x:Static th:PT+C.SwitchOffTrackBrush}"
-                  CornerRadius="{x:Static th:PT+M.SwitchTrackHeight}">
+                  CornerRadius="{x:Static th:PT+R.SwitchTrack}">
             <Canvas>
               <Border x:Name="Knob"
                       Width="{x:Static th:PT+M.SwitchKnobSize}"
                       Height="{x:Static th:PT+M.SwitchKnobSize}"
-                      CornerRadius="{x:Static th:PT+M.SwitchKnobSize}"
+                      CornerRadius="{x:Static th:PT+R.SwitchKnob}"
                       Background="{x:Static th:PT+C.SwitchOffKnobBrush}"
                       Canvas.Left="{x:Static th:PT+M.SwitchKnobInset}"
                       Canvas.Top="{x:Static th:PT+M.SwitchKnobInset}" />
@@ -392,8 +392,8 @@
         <ControlTemplate TargetType="ToolTip">
           <Border Background="{x:Static th:PT+C.RaisedBrush}"
                   BorderBrush="{x:Static th:PT+C.MenuEdgeBrush}"
-                  BorderThickness="{x:Static th:PT+M.Hairline}"
-                  CornerRadius="{x:Static th:PT+M.FieldRadius}"
+                  BorderThickness="{x:Static th:PT+T.Hairline}"
+                  CornerRadius="{x:Static th:PT+R.Field}"
                   Padding="{x:Static th:PT+T.ToolTip}">
             <ContentPresenter />
           </Border>
@@ -414,9 +414,9 @@
         <ControlTemplate TargetType="ContextMenu">
           <Border Background="{TemplateBinding Background}"
                   BorderBrush="{x:Static th:PT+C.MenuEdgeBrush}"
-                  BorderThickness="{x:Static th:PT+M.Hairline}"
-                  CornerRadius="{x:Static th:PT+M.MenuRadius}"
-                  Padding="{x:Static th:PT+M.MenuPadding}">
+                  BorderThickness="{x:Static th:PT+T.Hairline}"
+                  CornerRadius="{x:Static th:PT+R.Menu}"
+                  Padding="{x:Static th:PT+T.MenuPad}">
             <StackPanel IsItemsHost="True" />
           </Border>
         </ControlTemplate>
@@ -431,7 +431,7 @@
       <Setter.Value>
         <ControlTemplate TargetType="MenuItem">
           <Border x:Name="Fill" Background="Transparent"
-                  CornerRadius="{x:Static th:PT+M.MenuRowRadius}"
+                  CornerRadius="{x:Static th:PT+R.MenuRow}"
                   Padding="{x:Static th:PT+T.MenuRow}">
             <ContentPresenter ContentSource="Header" VerticalAlignment="Center" />
           </Border>
@@ -450,7 +450,7 @@
   </Style>
 
   <Style TargetType="Separator">
-    <Setter Property="Height" Value="{x:Static th:PT+M.Hairline}" />
+    <Setter Property="Height" Value="{x:Static th:PT+T.Hairline}" />
     <Setter Property="Margin" Value="{x:Static th:PT+T.MenuRule}" />
     <Setter Property="Background" Value="{x:Static th:PT+C.MenuRuleBrush}" />
     <Setter Property="Template">

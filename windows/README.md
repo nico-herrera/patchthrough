@@ -65,6 +65,14 @@ then renders an empty control, and this interface is written on a machine that
 cannot run it. The check reads the XAML and the viewmodels and fails when a path
 has nowhere to land.
 
+`node tools/verify-xaml-values.mjs` guards the other run-time trap: `x:Static`
+assigns a token without a type converter, so a `CornerRadius` fed a double
+token, or a markup extension embedded inside an attribute string, compiles
+everywhere and throws XamlParseException at load, on Windows only. The first
+CI render of the interface crashed on exactly this, which is why every token a
+XAML `CornerRadius`, `Thickness`, or grid length consumes now lives in
+`PT.R`, `PT.T`, or `PT.G` with the right type.
+
 `verify-contract.sh` is the interesting one. It generates a session with the
 real `Patchthrough.Core` code path and hands it to `cli/bin/patchthrough.js`,
 which is the definition of done for milestone 1.
