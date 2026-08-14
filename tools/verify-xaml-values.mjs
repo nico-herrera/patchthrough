@@ -8,7 +8,13 @@
 // raw double is not a CornerRadius. The assignment compiles cleanly on every
 // platform and throws XamlParseException when the BAML loads, which is to
 // say on Windows only, at startup. The first CI render of the interface
-// found exactly that, so this check exists to find the next one on macOS.
+// found exactly that.
+//
+// The mismatch cuts both ways. The second CI render found the reverse: a
+// Separator's Height, a double, fed the Thickness Hairline token by a
+// careless rewrite. So double-typed properties are checked too, and Width
+// and Height are resolved against their element, because the same attribute
+// needs a GridLength on a ColumnDefinition and a double everywhere else.
 //
 // It also refuses a markup extension embedded inside a longer attribute
 // string, like Margin="0,{x:Static …},0,8". XAML treats a value that does
@@ -22,16 +28,24 @@ const repoRoot = path.resolve(import.meta.dirname, '..');
 const appRoot = path.join(repoRoot, 'windows/src/Patchthrough.App');
 const themePath = path.join(appRoot, 'Theme/PT.cs');
 
-// Properties whose values x:Static must match exactly, and the type each
-// needs. Width/Height and friends take plain doubles and need no rule.
+// What each property needs when fed by x:Static. Width and Height mean
+// GridLength on grid definitions, handled below.
 const REQUIRED = {
   Margin: 'Thickness',
   Padding: 'Thickness',
   BorderThickness: 'Thickness',
   CornerRadius: 'CornerRadius',
+  Width: 'double',
+  Height: 'double',
+  MinWidth: 'double',
+  MinHeight: 'double',
+  MaxWidth: 'double',
+  MaxHeight: 'double',
+  FontSize: 'double',
+  StrokeThickness: 'double',
+  LineHeight: 'double',
 };
-// Grid definitions take GridLength, and a double is the natural mistake.
-const GRID = /<(?:ColumnDefinition[^>]*\bWidth|RowDefinition[^>]*\bHeight)="\{x:Static th:PT\+(\w+)\.(\w+)\}"/g;
+const GRID_ELEMENTS = new Set(['ColumnDefinition', 'RowDefinition']);
 
 function walk(directory, extension, found = []) {
   for (const entry of readdirSync(directory)) {
@@ -63,10 +77,33 @@ function readTokenTypes() {
   return types;
 }
 
+const STATIC_VALUE = /^\{x:Static th:PT\+(\w+)\.(\w+)\}$/;
+
 function main() {
   const types = readTokenTypes();
   const problems = [];
   const files = walk(appRoot, '.xaml');
+
+  /** What `property` on `element` needs, or null when there is no rule. */
+  const neededType = (element, property) => {
+    if (GRID_ELEMENTS.has(element) && (property === 'Width' || property === 'Height')) {
+      return 'GridLength';
+    }
+    return REQUIRED[property] ?? null;
+  };
+
+  const check = (file, element, property, value) => {
+    const isStatic = STATIC_VALUE.exec(value);
+    if (!isStatic) return;
+    const needed = neededType(element, property);
+    if (needed === null) return;
+    const token = `${isStatic[1]}.${isStatic[2]}`;
+    const actual = types.get(token);
+    if (actual === undefined || actual === needed) return; // unknown: not ours to judge
+    problems.push(
+      `${file}: ${element} ${property} uses PT.${token}, which is ${actual}; `
+      + `${property} needs ${needed}`);
+  };
 
   for (const file of files) {
     const name = path.basename(file);
@@ -79,37 +116,25 @@ function main() {
         + 'so the type converter receives it as literal text');
     }
 
-    // Plain attributes: Prop="{x:Static th:PT+C.Name}".
-    for (const match of text.matchAll(/(\w+)="\{x:Static th:PT\+(\w+)\.(\w+)\}"/g)) {
-      report(name, match[1], match[2], match[3]);
-    }
-
-    // Setter form, attribute order free: <Setter Property="Prop" Value="…"/>.
-    for (const match of text.matchAll(
-      /<Setter(?=[^>]*\bProperty="(\w+)")(?=[^>]*\bValue="\{x:Static th:PT\+(\w+)\.(\w+)\}")[^>]*>/g)) {
-      report(name, match[1], match[2], match[3]);
-    }
-
-    for (const match of text.matchAll(GRID)) {
-      const token = `${match[1]}.${match[2]}`;
-      const type = types.get(token);
-      if (type !== undefined && type !== 'GridLength') {
-        problems.push(
-          `${name}: a grid definition uses PT.${token}, which is ${type}; `
-          + 'it needs GridLength (see PT.G)');
+    // Element-aware pass: every start tag, with its attributes, so Width on
+    // a ColumnDefinition and Width on a Border get different rules.
+    for (const tag of text.matchAll(/<((?:\w+:)?\w+)((?:[^>"]|"[^"]*")*?)\/?>/g)) {
+      const element = tag[1].split(':').pop();
+      const attributes = tag[2];
+      if (element === 'Setter') {
+        const property = /\bProperty="(\w+)"/.exec(attributes);
+        const value = /\bValue="([^"]*)"/.exec(attributes);
+        // A style's setter has no element context, so Width and Height fall
+        // back to the double rule, which is what every current setter wants.
+        if (property && value) check(name, 'Setter', property[1], value[1]);
+        continue;
+      }
+      for (const attribute of attributes.matchAll(/([\w.]+)="([^"]*)"/g)) {
+        const [, property, value] = attribute;
+        if (property.includes('.')) continue; // attached properties: no rule
+        check(name, element, property, value);
       }
     }
-  }
-
-  function report(file, property, tokenClass, tokenName) {
-    const needed = REQUIRED[property];
-    if (needed === undefined) return;
-    const token = `${tokenClass}.${tokenName}`;
-    const type = types.get(token);
-    if (type === undefined || type === needed) return; // unknown: not ours to judge
-    problems.push(
-      `${file}: ${property} uses PT.${token}, which is ${type}; `
-      + `${property} needs ${needed}`);
   }
 
   if (problems.length > 0) {

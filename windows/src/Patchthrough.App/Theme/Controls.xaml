@@ -450,7 +450,11 @@
   </Style>
 
   <Style TargetType="Separator">
-    <Setter Property="Height" Value="{x:Static th:PT+T.Hairline}" />
+    <!-- Height is a double: this is the one Hairline consumer that wants the
+         number, not the Thickness. A blanket rewrite once swapped it and the
+         interface stopped loading, which is why verify-xaml-values.mjs now
+         checks double-typed properties too. -->
+    <Setter Property="Height" Value="{x:Static th:PT+M.Hairline}" />
     <Setter Property="Margin" Value="{x:Static th:PT+T.MenuRule}" />
     <Setter Property="Background" Value="{x:Static th:PT+C.MenuRuleBrush}" />
     <Setter Property="Template">
