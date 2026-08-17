@@ -21,7 +21,101 @@ enum DoctorReport {
             checkSystemAudio(),
             checkRecordingsRoot(recordingsRoot),
             checkTranscription(),
+            checkUpdates(),
+            checkInstallLocation(),
         ]
+    }
+
+    /// Two installed copies confuse an update: the updater replaces the one
+    /// that is running, and LaunchServices can still resolve the app by
+    /// bundle id to the other, older copy.
+    static func checkInstallLocation() -> Check {
+        let name = "install location"
+        let home = FileManager.default.homeDirectoryForCurrentUser
+        let candidates = [
+            home.appendingPathComponent("Applications/patchthrough.app"),
+            URL(fileURLWithPath: "/Applications/patchthrough.app"),
+        ]
+        let installed = candidates.filter { FileManager.default.fileExists(atPath: $0.path) }
+        guard installed.count > 1 else {
+            return Check(name: name, status: .ok, remediation: nil)
+        }
+        return Check(
+            name: name,
+            status: .warn("two copies are installed"),
+            remediation: "keep one: delete either \(installed[0].path) or \(installed[1].path)"
+        )
+    }
+
+    /// Reads what the last check recorded. Never asks the network: this
+    /// runs at every app launch, and a launch must not wait on GitHub.
+    static func checkUpdates() -> Check {
+        let name = "updates"
+        guard UpdateSource.hasFeed else {
+            return Check(
+                name: name,
+                status: .warn("this build has no update feed"),
+                remediation: nil
+            )
+        }
+        // A source build has no release version to compare, so it can
+        // neither check nor install. Say so instead of asking for a check
+        // that would report nothing.
+        guard SemVer(Patchthrough.releaseVersion) != nil else {
+            return Check(
+                name: name,
+                status: .warn("source build, so updates do not apply"),
+                remediation: nil
+            )
+        }
+        // The accessor already forces true on a build that forbids disabling.
+        guard Config.updateCheckEnabled() else {
+            return Check(
+                name: name,
+                status: .warn("checks are off"),
+                remediation: "turn them on in Settings, or run: patchthrough update"
+            )
+        }
+        let state = UpdateState()
+        guard let outcome = state.lastOutcome, let at = state.lastOutcomeAt else {
+            return Check(
+                name: name,
+                status: .warn("no check has run yet"),
+                remediation: "run: patchthrough update"
+            )
+        }
+        // A feed that rejects this build's credentials means updates have
+        // stopped arriving, which is otherwise invisible. Fail loudly.
+        if outcome == "failed:unauthorized" {
+            return Check(
+                name: name,
+                status: .fail("the update feed rejected this build's credentials"),
+                remediation: "this build can no longer see updates. Get the current build from IT"
+            )
+        }
+        if Date().timeIntervalSince(at) > 48 * 60 * 60 {
+            return Check(
+                name: name,
+                status: .warn("no successful check in the last two days"),
+                remediation: "run: patchthrough update"
+            )
+        }
+        if outcome.hasPrefix("available:") {
+            let version = String(outcome.dropFirst("available:".count))
+            return Check(
+                name: name,
+                status: .warn("version \(version) is available"),
+                remediation: "click Update to \(version) in the menu bar"
+            )
+        }
+        if outcome.hasPrefix("failed:") {
+            return Check(
+                name: name,
+                status: .warn("the last check did not finish (\(outcome))"),
+                remediation: "run: patchthrough update"
+            )
+        }
+        return Check(name: name, status: .ok, remediation: nil)
     }
 
     static func checkMicrophone() -> Check {

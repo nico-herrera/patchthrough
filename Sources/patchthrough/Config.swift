@@ -110,6 +110,15 @@ enum Config {
         load()?["auto_paste"] as? Bool ?? true
     }
 
+    /// Whether the app checks the release feed for a newer version. On by
+    /// default. Set `"updates": {"check": false}` to stop the checks. A
+    /// build whose UpdateSource forbids disabling ignores the key.
+    static func updateCheckEnabled() -> Bool {
+        guard UpdateSource.allowsDisabling else { return true }
+        let updates = load()?["updates"] as? [String: Any]
+        return updates?["check"] as? Bool ?? true
+    }
+
     /// Whether transcription runs at all.
     static func transcriptionEnabledValue() -> Bool {
         transcription()?["enabled"] as? Bool ?? true

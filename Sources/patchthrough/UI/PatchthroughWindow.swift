@@ -130,6 +130,10 @@ final class SessionStore: ObservableObject {
 
     let root: URL
     var onToggleRecording: (() -> Void)?
+    /// Saved Settings changed the update-check setting. The controller owns
+    /// the schedule, so it starts or stops it here rather than at the next
+    /// launch.
+    var onUpdateCheckChanged: ((Bool) -> Void)?
 
     init(root: URL) {
         self.root = root
@@ -1493,6 +1497,7 @@ struct SettingsView: View {
     @State private var voiceProcessing = false
     @State private var autoPaste = false
     @State private var launchAtLogin = false
+    @State private var updateCheck = true
     @State private var onStop = ""
     @State private var openWindowOnRecord = true
     @State private var terminalID = TerminalApp.known[0].id
@@ -1647,6 +1652,22 @@ struct SettingsView: View {
                     well(text: $onStop, placeholder: "my-hook")
                         .focused($focused, equals: .hook)
                     caption("Runs with the session folder as its only argument. Empty for none.")
+                }
+
+                section("Updates") {
+                    if UpdateSource.allowsDisabling {
+                        card {
+                            toggleRow("Check for updates automatically",
+                                      subtitle: "Asks GitHub for the newest release about twice a day",
+                                      isOn: $updateCheck)
+                        }
+                        caption("Nothing installs without a click, and never during a recording.")
+                    } else {
+                        caption("""
+                        Updates come from the Fusion92 release feed and are always on for \
+                        this build. Nothing installs during a recording.
+                        """)
+                    }
                 }
 
                 if let error {
@@ -1919,6 +1940,7 @@ struct SettingsView: View {
         voiceProcessing = Config.micVoiceProcessing()
         autoPaste = Config.autoPaste()
         launchAtLogin = LaunchAtLogin.isEnabled
+        updateCheck = Config.updateCheckEnabled()
         onStop = Config.onStop() ?? ""
         openWindowOnRecord = Config.notesOpenWindowOnRecord()
         terminalID = TerminalApp.current().id
@@ -2006,9 +2028,15 @@ struct SettingsView: View {
                 // holding deliberate overrides only.
                 "terminal": terminalID == TerminalApp.known[0].id ? nil : terminalID,
                 "custom_destinations": destinations.isEmpty ? nil : destinations,
+                // A build that forbids disabling never writes the key, so
+                // the config keeps no setting the app would ignore.
+                "updates.check": (!UpdateSource.allowsDisabling || updateCheck) ? nil : false,
             ])
             if launchAtLogin != LaunchAtLogin.isEnabled {
                 try LaunchAtLogin.setEnabled(launchAtLogin)
+            }
+            if UpdateSource.allowsDisabling {
+                store.onUpdateCheckChanged?(updateCheck)
             }
             // The menus read destinations once per refresh, so a saved
             // destination has to trigger one or it appears only on the next.
