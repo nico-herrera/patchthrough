@@ -1,0 +1,219 @@
+<Window x:Class="Patchthrough.App.Shell.SettingsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:th="clr-namespace:Patchthrough.App.Theme"
+        xmlns:c="clr-namespace:Patchthrough.App.Controls"
+        Title="Settings"
+        Width="{x:Static th:PT+M.SettingsWidth}"
+        SizeToContent="Height"
+        ResizeMode="NoResize"
+        WindowStyle="None"
+        WindowStartupLocation="CenterOwner"
+        ShowInTaskbar="False"
+        Background="{x:Static th:PT+C.ChromeBrush}"
+        Foreground="{x:Static th:PT+C.TextBrush}"
+        FontFamily="{x:Static th:PT+F.Ui}"
+        UseLayoutRounding="True">
+
+  <Window.Resources>
+    <th:BoolToVisibilityConverter x:Key="Visible" />
+    <th:BoolToVisibilityConverter x:Key="VisibleWhenFalse" Invert="True" />
+
+    <!-- A settings row: a switch, a label, and a caption that states the tradeoff
+         rather than restating the label. -->
+    <Style x:Key="SettingCard" TargetType="Border">
+      <Setter Property="Background" Value="{x:Static th:PT+C.RaisedBrush}" />
+      <Setter Property="CornerRadius" Value="{x:Static th:PT+R.Card}" />
+      <Setter Property="Padding" Value="{x:Static th:PT+T.SettingsField}" />
+      <Setter Property="Margin" Value="0,0,0,8" />
+    </Style>
+
+    <Style x:Key="SettingLabel" TargetType="TextBlock" BasedOn="{StaticResource PT.Text}">
+      <Setter Property="FontSize" Value="{x:Static th:PT+F.SettingRow}" />
+    </Style>
+
+    <Style x:Key="SettingCaption" TargetType="TextBlock" BasedOn="{StaticResource PT.Text.Caption}">
+      <Setter Property="Foreground" Value="{x:Static th:PT+C.Text4Brush}" />
+      <Setter Property="TextWrapping" Value="Wrap" />
+      <Setter Property="Margin" Value="0,3,0,0" />
+    </Style>
+  </Window.Resources>
+
+  <Grid>
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto" />
+      <RowDefinition Height="Auto" />
+      <RowDefinition Height="Auto" />
+    </Grid.RowDefinitions>
+
+    <!-- Header -->
+    <Border Grid.Row="0" Padding="{x:Static th:PT+T.SheetStrip}"
+            BorderBrush="{x:Static th:PT+C.HairlineBrush}"
+            BorderThickness="{x:Static th:PT+T.BottomHairline}"
+            MouseLeftButtonDown="OnHeaderDrag">
+      <Grid>
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="Auto" />
+          <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+        <StackPanel Orientation="Horizontal">
+          <c:MarkView Width="{x:Static th:PT+M.MarkSize}" Height="{x:Static th:PT+M.MarkSize}"
+                      Stroke="{x:Static th:PT+C.TextBrush}" />
+          <TextBlock Text="Settings" VerticalAlignment="Center" Margin="9,0,0,0"
+                     FontSize="{x:Static th:PT+F.SheetTitle}"
+                     FontWeight="{x:Static th:PT+F.SheetTitleWeight}" />
+        </StackPanel>
+        <TextBlock Grid.Column="1" Style="{StaticResource PT.Text.Mono}"
+                   HorizontalAlignment="Right" VerticalAlignment="Center"
+                   Foreground="{x:Static th:PT+C.Text5Brush}"
+                   TextTrimming="CharacterEllipsis"
+                   ToolTip="{Binding ConfigPath}" Text="{Binding ConfigPath}" />
+      </Grid>
+    </Border>
+
+    <!-- Body -->
+    <ScrollViewer Grid.Row="1" MaxHeight="{x:Static th:PT+M.SheetBodyMaxHeight}">
+      <StackPanel Margin="{x:Static th:PT+T.SheetBody}">
+
+        <c:TrackedText Text="Recordings" Uppercase="True" Margin="{x:Static th:PT+T.SheetSection}" />
+
+        <Border Style="{StaticResource SettingCard}">
+          <StackPanel>
+            <Grid>
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+              </Grid.ColumnDefinitions>
+              <TextBox Grid.Column="0" IsReadOnly="True" VerticalAlignment="Center"
+                       Text="{Binding RecordingsDirectory}" />
+              <Button Grid.Column="1" Style="{StaticResource PT.Button.Chip}" Margin="8,0,0,0"
+                      Click="OnChooseRecordings" Content="Choose…" />
+            </Grid>
+            <TextBlock Style="{StaticResource SettingCaption}" Text="{Binding RecordingsCaption}" />
+          </StackPanel>
+        </Border>
+
+        <Border Style="{StaticResource SettingCard}">
+          <Grid>
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="*" />
+              <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <StackPanel>
+              <TextBlock Style="{StaticResource SettingLabel}" Text="Start Patchthrough when I sign in" />
+              <TextBlock Style="{StaticResource SettingCaption}" Text="{Binding LaunchAtLoginCaption}" />
+            </StackPanel>
+            <ToggleButton Grid.Column="1" Style="{StaticResource PT.Switch}" Margin="12,0,0,0"
+                          VerticalAlignment="Center" IsChecked="{Binding LaunchAtLogin}" />
+          </Grid>
+        </Border>
+
+        <c:TrackedText Text="Transcription" Uppercase="True" Margin="{x:Static th:PT+T.SheetSection}" />
+
+        <Border Style="{StaticResource SettingCard}">
+          <Grid>
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="*" />
+              <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <StackPanel>
+              <TextBlock Style="{StaticResource SettingLabel}" Text="Transcribe after each recording" />
+              <TextBlock Style="{StaticResource SettingCaption}" Text="{Binding TranscriptionCaption}" />
+            </StackPanel>
+            <ToggleButton Grid.Column="1" Style="{StaticResource PT.Switch}" Margin="12,0,0,0"
+                          VerticalAlignment="Center" IsChecked="{Binding TranscriptionEnabled}" />
+          </Grid>
+        </Border>
+
+        <Border Style="{StaticResource SettingCard}">
+          <Grid>
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="*" />
+              <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <StackPanel>
+              <TextBlock Style="{StaticResource SettingLabel}" Text="Max Accuracy" />
+              <TextBlock Style="{StaticResource SettingCaption}" Text="{Binding QualityCaption}" />
+            </StackPanel>
+            <ToggleButton Grid.Column="1" Style="{StaticResource PT.Switch}" Margin="12,0,0,0"
+                          VerticalAlignment="Center"
+                          IsChecked="{Binding MaxAccuracy}"
+                          IsEnabled="{Binding MaxAccuracyAvailable}" />
+          </Grid>
+        </Border>
+
+        <Border Style="{StaticResource SettingCard}">
+          <StackPanel>
+            <Grid>
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+              </Grid.ColumnDefinitions>
+              <TextBlock Style="{StaticResource SettingLabel}" Text="Engine" VerticalAlignment="Center" />
+              <ComboBox Grid.Column="1" MinWidth="140" Margin="12,0,0,0"
+                        ItemsSource="{Binding Engines}" SelectedItem="{Binding Engine}" />
+            </Grid>
+            <TextBlock Style="{StaticResource SettingCaption}" Text="{Binding EngineCaption}" />
+          </StackPanel>
+        </Border>
+
+        <c:TrackedText Text="Notes" Uppercase="True" Margin="{x:Static th:PT+T.SheetSection}" />
+
+        <Border Style="{StaticResource SettingCard}">
+          <Grid>
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="*" />
+              <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <StackPanel>
+              <TextBlock Style="{StaticResource SettingLabel}" Text="Open the window when recording starts" />
+              <TextBlock Style="{StaticResource SettingCaption}" Text="{Binding OpenWindowCaption}" />
+            </StackPanel>
+            <ToggleButton Grid.Column="1" Style="{StaticResource PT.Switch}" Margin="12,0,0,0"
+                          VerticalAlignment="Center" IsChecked="{Binding OpenWindowOnRecord}" />
+          </Grid>
+        </Border>
+
+        <c:TrackedText Text="Projects" Uppercase="True" Margin="{x:Static th:PT+T.SheetSection}" />
+
+        <Border Style="{StaticResource SettingCard}">
+          <StackPanel>
+            <Grid>
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+              </Grid.ColumnDefinitions>
+              <TextBox Grid.Column="0" IsReadOnly="True" VerticalAlignment="Center"
+                       Text="{Binding ProjectsDirectory}" />
+              <Button Grid.Column="1" Style="{StaticResource PT.Button.Chip}" Margin="8,0,0,0"
+                      Click="OnChooseProjects" Content="Choose…" />
+            </Grid>
+            <TextBlock Style="{StaticResource SettingCaption}" Text="{Binding ProjectsCaption}" />
+          </StackPanel>
+        </Border>
+
+      </StackPanel>
+    </ScrollViewer>
+
+    <!-- Footer -->
+    <Border Grid.Row="2" Padding="{x:Static th:PT+T.SheetStrip}"
+            BorderBrush="{x:Static th:PT+C.HairlineBrush}"
+            BorderThickness="{x:Static th:PT+T.TopHairline}">
+      <Grid>
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="Auto" />
+          <ColumnDefinition Width="*" />
+          <ColumnDefinition Width="Auto" />
+          <ColumnDefinition Width="Auto" />
+        </Grid.ColumnDefinitions>
+        <Button Grid.Column="0" Style="{StaticResource PT.Button.Text}"
+                Click="OnRevealConfig" Content="Reveal config file" />
+        <Button Grid.Column="2" Style="{StaticResource PT.Button.Chip}" Margin="0,0,8,0"
+                IsCancel="True" Click="OnCancel" Content="Cancel" />
+        <Button Grid.Column="3" Style="{StaticResource PT.Button.Primary}"
+                IsDefault="True" Click="OnSave"
+                Padding="{x:Static th:PT+T.SheetPrimaryButton}" Content="Save" />
+      </Grid>
+    </Border>
+  </Grid>
+</Window>

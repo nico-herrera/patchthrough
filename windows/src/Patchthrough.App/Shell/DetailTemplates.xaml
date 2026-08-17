@@ -1,0 +1,251 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:th="clr-namespace:Patchthrough.App.Theme"
+                    xmlns:core="clr-namespace:Patchthrough.Core;assembly=Patchthrough.Core"
+                    xmlns:vm="clr-namespace:Patchthrough.App.ViewModels">
+
+  <th:BoolToVisibilityConverter x:Key="Visible" />
+  <th:BoolToVisibilityConverter x:Key="VisibleWhenFalse" Invert="True" />
+  <th:PresenceToVisibilityConverter x:Key="VisibleWhenPresent" />
+  <th:PresenceToVisibilityConverter x:Key="VisibleWhenAbsent" Invert="True" />
+  <th:TurnMaxWidthConverter x:Key="TurnMaxWidth" />
+  <th:ProgressFractionConverter x:Key="ProgressPercent" />
+
+  <!-- One note: its position in the transcript, then the words. The timestamp sits
+       in a fixed right-aligned column so a column of notes reads as a list rather
+       than as ragged prose. -->
+  <DataTemplate x:Key="NoteRow" DataType="{x:Type core:ResolvedNote}">
+    <Grid Margin="{x:Static th:PT+T.NoteRow}">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="{x:Static th:PT+G.NotesGutter}" />
+        <ColumnDefinition Width="*" />
+      </Grid.ColumnDefinitions>
+      <TextBlock Style="{StaticResource PT.Text.MonoTiny}" Text="{Binding Clock}"
+                 TextAlignment="Right" Margin="0,2,0,0" VerticalAlignment="Top" />
+      <TextBlock Grid.Column="1" Style="{StaticResource PT.Text}" Text="{Binding Text}"
+                 FontSize="{x:Static th:PT+F.Transcript}" TextWrapping="Wrap"
+                 Margin="10,0,0,0" />
+    </Grid>
+  </DataTemplate>
+
+  <!-- The notes list, shared by the recording pane and the finished transcript. -->
+  <DataTemplate x:Key="NotesList" DataType="{x:Type vm:SessionDetailViewModel}">
+    <ItemsControl ItemsSource="{Binding Notes}" ItemTemplate="{StaticResource NoteRow}" />
+  </DataTemplate>
+
+  <!-- The header strip shared by every detail state. -->
+  <DataTemplate x:Key="DetailHeader" DataType="{x:Type vm:SessionDetailViewModel}">
+    <Border BorderBrush="{x:Static th:PT+C.HairlineBrush}"
+            BorderThickness="{x:Static th:PT+T.BottomHairline}"
+            Padding="{x:Static th:PT+T.DetailHeader}">
+      <StackPanel>
+        <TextBlock Style="{StaticResource PT.Text}" Text="{Binding Title}"
+                   FontSize="{x:Static th:PT+F.SettingRow}" TextTrimming="CharacterEllipsis" />
+        <TextBlock Style="{StaticResource PT.Text.Caption}" Margin="0,3,0,0"
+                   Foreground="{x:Static th:PT+C.LabelBrush}"
+                   Text="{Binding Subtitle}"
+                   Visibility="{Binding Subtitle, Converter={StaticResource VisibleWhenPresent}}" />
+      </StackPanel>
+    </Border>
+  </DataTemplate>
+
+  <!--
+    One turn of the conversation. This is the layout the whole transcript reads
+    from, and two things in it are load-bearing:
+
+    the block for "me" is right aligned and the block for "them" is left, which is
+    what makes a two-party conversation legible at a glance;
+
+    and the body text inside both is left aligned. A right-aligned paragraph
+    measurably slows reading, so only the block moves, never the text.
+  -->
+  <DataTemplate x:Key="TurnTemplate" DataType="{x:Type core:Turn}">
+    <Grid Margin="{x:Static th:PT+T.TurnGap}">
+      <!-- "them": no ground, so the other side reads as the quieter half. -->
+      <StackPanel HorizontalAlignment="Left"
+                  MaxWidth="{Binding ActualWidth, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource TurnMaxWidth}}"
+                  Visibility="{Binding IsMe, Converter={StaticResource VisibleWhenFalse}}">
+        <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+          <TextBlock Style="{StaticResource PT.Text.Speaker}" Text="THEM"
+                     Foreground="{x:Static th:PT+C.SpeakerThemBrush}" />
+          <TextBlock Style="{StaticResource PT.Text.MonoTiny}" Text="{Binding Clock}"
+                     Margin="8,0,0,0" VerticalAlignment="Center" />
+        </StackPanel>
+        <TextBlock Style="{StaticResource PT.Text.Transcript}" Text="{Binding Text}"
+                   Foreground="{x:Static th:PT+C.Text2Brush}" />
+      </StackPanel>
+
+      <!-- "me": a bubble on the Surface ground, which is not Raised. -->
+      <StackPanel HorizontalAlignment="Right"
+                  MaxWidth="{Binding ActualWidth, RelativeSource={RelativeSource AncestorType=ItemsControl}, Converter={StaticResource TurnMaxWidth}}"
+                  Visibility="{Binding IsMe, Converter={StaticResource Visible}}">
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,0,7">
+          <TextBlock Style="{StaticResource PT.Text.MonoTiny}" Text="{Binding Clock}"
+                     Margin="0,0,8,0" VerticalAlignment="Center" />
+          <TextBlock Style="{StaticResource PT.Text.Speaker}" Text="ME"
+                     Foreground="{x:Static th:PT+C.SignalLitBrush}" />
+        </StackPanel>
+        <Border Background="{x:Static th:PT+C.SurfaceBrush}"
+                CornerRadius="{x:Static th:PT+R.Bubble}"
+                Padding="{x:Static th:PT+T.Bubble}">
+          <TextBlock Style="{StaticResource PT.Text.Transcript}" Text="{Binding Text}" />
+        </Border>
+      </StackPanel>
+    </Grid>
+  </DataTemplate>
+
+  <!-- A transcribed session. -->
+  <DataTemplate x:Key="TranscriptDetail" DataType="{x:Type vm:SessionDetailViewModel}">
+    <Grid>
+      <Grid.RowDefinitions>
+        <RowDefinition Height="Auto" />
+        <RowDefinition Height="Auto" />
+        <RowDefinition Height="*" />
+      </Grid.RowDefinitions>
+      <ContentControl Grid.Row="0" Content="{Binding}" ContentTemplate="{StaticResource DetailHeader}" />
+
+      <!-- The notes strip, above the transcript because that is the order a reader
+           needs: what a human flagged, then the record it points at. Capped in
+           height so a long list cannot push the transcript off the pane. -->
+      <Border Grid.Row="1" Background="{x:Static th:PT+C.SunkenBrush}"
+              BorderBrush="{x:Static th:PT+C.HairlineBrush}"
+              BorderThickness="{x:Static th:PT+T.BottomHairline}"
+              Visibility="{Binding HasNotes, Converter={StaticResource Visible}}">
+        <ScrollViewer MaxHeight="{x:Static th:PT+M.NotesStripMaxHeight}"
+                      Padding="{x:Static th:PT+T.SidebarRowContent}">
+          <ContentControl Content="{Binding}" ContentTemplate="{StaticResource NotesList}" />
+        </ScrollViewer>
+      </Border>
+
+      <ScrollViewer Grid.Row="2" Padding="{x:Static th:PT+T.TranscriptColumn}">
+        <ItemsControl ItemsSource="{Binding Turns}" ItemTemplate="{StaticResource TurnTemplate}">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+              <!-- Virtualized: a long meeting is thousands of turns, and drawing
+                   them all would make the pane take seconds to appear. -->
+              <VirtualizingStackPanel />
+            </ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+        </ItemsControl>
+      </ScrollViewer>
+    </Grid>
+  </DataTemplate>
+
+  <!--
+    A live recording. This is a working surface rather than a placeholder: notes are
+    typed while the meeting is happening, which is the whole reason the window opens
+    when a recording starts.
+  -->
+  <DataTemplate x:Key="RecordingDetail" DataType="{x:Type vm:SessionDetailViewModel}">
+    <Grid>
+      <Grid.RowDefinitions>
+        <RowDefinition Height="Auto" />
+        <RowDefinition Height="*" />
+        <RowDefinition Height="Auto" />
+      </Grid.RowDefinitions>
+
+      <!-- Header. The elapsed time is the one red thing here, because recording is
+           what red means. -->
+      <Border Grid.Row="0" BorderBrush="{x:Static th:PT+C.HairlineBrush}"
+              BorderThickness="{x:Static th:PT+T.BottomHairline}"
+              Padding="{x:Static th:PT+T.DetailHeader}">
+        <StackPanel Orientation="Horizontal">
+          <TextBlock Style="{StaticResource PT.Text}" Text="{Binding Title}"
+                     TextTrimming="CharacterEllipsis" />
+          <TextBlock Style="{StaticResource PT.Text.Caption}" Text="Recording"
+                     Margin="10,0,0,0" VerticalAlignment="Center"
+                     Foreground="{x:Static th:PT+C.LabelBrush}" />
+          <TextBlock Style="{StaticResource PT.Text.Mono}" Margin="8,0,0,0"
+                     VerticalAlignment="Center"
+                     Foreground="{x:Static th:PT+C.SignalLitBrush}"
+                     Text="{Binding DataContext.Elapsed, RelativeSource={RelativeSource AncestorType=ContentControl}}" />
+        </StackPanel>
+      </Border>
+
+      <!-- The notes so far, or an explanation of what this surface is for. -->
+      <ScrollViewer Grid.Row="1" Padding="{x:Static th:PT+T.TranscriptColumn}">
+        <Grid>
+          <ContentControl Content="{Binding}" ContentTemplate="{StaticResource NotesList}"
+                          Visibility="{Binding HasNotes, Converter={StaticResource Visible}}" />
+          <StackPanel VerticalAlignment="Center" MaxWidth="420"
+                      Visibility="{Binding HasNotes, Converter={StaticResource VisibleWhenFalse}}">
+            <TextBlock FontFamily="{x:Static th:PT+F.Glyph}" Text="&#xE70F;"
+                       FontSize="{x:Static th:PT+F.Placeholder}"
+                       Foreground="{x:Static th:PT+C.GlyphDimBrush}"
+                       HorizontalAlignment="Center" />
+            <TextBlock Style="{StaticResource PT.Text.Placeholder}" Margin="0,14,0,0"
+                       Text="Take notes as you go" />
+            <TextBlock Style="{StaticResource PT.Text.Caption}" Margin="0,7,0,0"
+                       TextAlignment="Center" TextWrapping="Wrap"
+                       Foreground="{x:Static th:PT+C.Text4Brush}"
+                       Text="Anything you type is timestamped against the recording and travels with the transcript. Nothing here is generated or summarized." />
+          </StackPanel>
+        </Grid>
+      </ScrollViewer>
+
+      <!-- The note field. Return commits and keeps focus, so a run of notes needs no
+           mouse. -->
+      <Border Grid.Row="2" Background="{x:Static th:PT+C.SunkenBrush}"
+              BorderBrush="{x:Static th:PT+C.HairlineBrush}"
+              BorderThickness="{x:Static th:PT+T.TopHairline}">
+        <Grid>
+          <TextBox x:Name="NoteField" Background="Transparent" BorderThickness="0"
+                   Padding="{x:Static th:PT+T.NoteField}"
+                   FontSize="{x:Static th:PT+F.Transcript}"
+                   Text="{Binding DataContext.NoteDraft, RelativeSource={RelativeSource AncestorType=ContentControl}, UpdateSourceTrigger=PropertyChanged}">
+            <TextBox.InputBindings>
+              <!-- Return commits without moving focus, so a run of notes during a
+                   meeting needs no mouse and no second key. -->
+              <KeyBinding Key="Enter"
+                          Command="{Binding DataContext.AddNoteCommand, RelativeSource={RelativeSource AncestorType=ContentControl}}" />
+            </TextBox.InputBindings>
+          </TextBox>
+          <TextBlock IsHitTestVisible="False" Style="{StaticResource PT.Text}"
+                     FontSize="{x:Static th:PT+F.Transcript}"
+                     Foreground="{x:Static th:PT+C.Text4Brush}"
+                     Padding="{x:Static th:PT+T.NoteField}"
+                     Text="Note something, then press Return"
+                     Visibility="{Binding DataContext.NoteDraft, RelativeSource={RelativeSource AncestorType=ContentControl}, Converter={StaticResource VisibleWhenAbsent}}" />
+        </Grid>
+      </Border>
+    </Grid>
+  </DataTemplate>
+
+  <!--
+    Every state that has no transcript to show: waiting, no speech, and
+    interrupted. One template, because the shape is the same in all four and only
+    the sentences differ. Each state supplies its own headline and its own
+    explanation rather than sharing a vague one.
+  -->
+  <DataTemplate x:Key="PlaceholderDetail" DataType="{x:Type vm:SessionDetailViewModel}">
+    <Grid>
+      <Grid.RowDefinitions>
+        <RowDefinition Height="Auto" />
+        <RowDefinition Height="*" />
+      </Grid.RowDefinitions>
+      <ContentControl Grid.Row="0" Content="{Binding}" ContentTemplate="{StaticResource DetailHeader}" />
+      <StackPanel Grid.Row="1" VerticalAlignment="Center" Margin="40" MaxWidth="420">
+        <TextBlock Style="{StaticResource PT.Text}" HorizontalAlignment="Center"
+                   TextAlignment="Center" TextWrapping="Wrap"
+                   Text="{Binding PlaceholderTitle}" />
+        <TextBlock Style="{StaticResource PT.Text.Caption}" Margin="0,7,0,0"
+                   TextAlignment="Center" TextWrapping="Wrap"
+                   Foreground="{x:Static th:PT+C.Text4Brush}"
+                   Text="{Binding PlaceholderDetail}" />
+
+        <!-- The first model download lands here, because this is the pane a user
+             is looking at while they wait for a transcript. It is a determinate
+             bar: the byte count is known, so it reports progress rather than
+             implying activity. -->
+        <StackPanel Margin="0,20,0,0"
+                    Visibility="{Binding DataContext.HasModelProgress, RelativeSource={RelativeSource AncestorType=ContentControl}, Converter={StaticResource Visible}}">
+          <TextBlock Style="{StaticResource PT.Text.Caption}" TextAlignment="Center" TextWrapping="Wrap"
+                     Text="{Binding DataContext.ModelProgressLabel, RelativeSource={RelativeSource AncestorType=ContentControl}}" />
+          <ProgressBar Margin="0,8,0,0" Minimum="0" Maximum="100"
+                       Value="{Binding DataContext.ModelProgress, RelativeSource={RelativeSource AncestorType=ContentControl}, Converter={StaticResource ProgressPercent}, Mode=OneWay}" />
+        </StackPanel>
+      </StackPanel>
+    </Grid>
+  </DataTemplate>
+
+</ResourceDictionary>

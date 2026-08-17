@@ -34,7 +34,12 @@ Add-Type -AssemblyName System.IO.Compression.FileSystem
 
 $scriptDirectory = $PSScriptRoot
 $repoRoot = [System.IO.Path]::GetFullPath((Join-Path $scriptDirectory '..\..'))
-$project = Join-Path $repoRoot 'windows\src\Patchthrough.Windows\Patchthrough.Windows.csproj'
+# The app is the published project, and it carries the console executable with
+# it: Patchthrough.App references Patchthrough.Windows, so a publish of the app
+# emits PatchthroughApp.exe and Patchthrough.exe into one self-contained
+# directory, each with its own runtimeconfig.json and deps.json. One shared
+# runtime rather than two, and the console verbs keep working from a shell.
+$project = Join-Path $repoRoot 'windows\src\Patchthrough.App\Patchthrough.App.csproj'
 $installerScript = Join-Path $scriptDirectory 'Patchthrough.iss'
 
 if ([string]::IsNullOrWhiteSpace($OutputDirectory)) {
@@ -200,11 +205,40 @@ function Get-VersionInfoVersion {
     return "$core.0"
 }
 
+function Find-RuntimePackDirectory {
+    param(
+        [Parameter(Mandatory = $true)][string] $PackId,
+        [Parameter(Mandatory = $true)][object] $Deps,
+        [Parameter(Mandatory = $true)][string[]] $PackageRoots,
+        [Parameter(Mandatory = $true)][string] $DepsPath
+    )
+
+    $runtime = @($Deps.libraries.PSObject.Properties | Where-Object {
+        $_.Name -like "runtimepack.$PackId/*"
+    })
+    if ($runtime.Count -ne 1) {
+        throw "expected one $PackId runtime pack in $DepsPath, found $($runtime.Count)"
+    }
+    $version = ($runtime[0].Name -split '/', 2)[1]
+
+    foreach ($packageRoot in $PackageRoots) {
+        $candidate = Join-Path $packageRoot "$($PackId.ToLowerInvariant())\$version"
+        if (Test-Path -LiteralPath $candidate -PathType Container) {
+            return $candidate
+        }
+    }
+    throw "could not find $PackId $version in the NuGet package roots"
+}
+
 function Copy-DotnetNotices {
     param([Parameter(Mandatory = $true)][string] $Destination)
 
     $projectDirectory = Split-Path -Parent $project
-    $depsPath = Join-Path $projectDirectory 'obj\Release\net8.0-windows\win-x64\Patchthrough.deps.json'
+    # The manifest is read from the publish output rather than from obj. A
+    # single-file build bundles deps.json into the executable and leaves it in
+    # obj; this build does not, so the published copy is the one that exists.
+    # It is also the copy that ships, which is what the notices must match.
+    $depsPath = Join-Path $Destination 'PatchthroughApp.deps.json'
     $assetsPath = Join-Path $projectDirectory 'obj\project.assets.json'
     if (-not (Test-Path -LiteralPath $depsPath -PathType Leaf) -or
         -not (Test-Path -LiteralPath $assetsPath -PathType Leaf)) {
@@ -212,30 +246,18 @@ function Copy-DotnetNotices {
     }
 
     $deps = Get-Content -LiteralPath $depsPath -Raw | ConvertFrom-Json
-    $runtime = @($deps.libraries.PSObject.Properties | Where-Object {
-        $_.Name -like 'runtimepack.Microsoft.NETCore.App.Runtime.win-x64/*'
-    })
-    if ($runtime.Count -ne 1) {
-        throw "expected one .NET runtime pack in $depsPath, found $($runtime.Count)"
-    }
-    $runtimeVersion = ($runtime[0].Name -split '/', 2)[1]
-
     $assets = Get-Content -LiteralPath $assetsPath -Raw | ConvertFrom-Json
     $packageRoots = @($assets.packageFolders.PSObject.Properties.Name)
-    $runtimeDirectory = $null
-    foreach ($packageRoot in $packageRoots) {
-        $candidate = Join-Path $packageRoot "microsoft.netcore.app.runtime.win-x64\$runtimeVersion"
-        if (Test-Path -LiteralPath $candidate -PathType Container) {
-            $runtimeDirectory = $candidate
-            break
-        }
-    }
-    if ($null -eq $runtimeDirectory) {
-        throw "could not find Microsoft.NETCore.App.Runtime.win-x64 $runtimeVersion in the NuGet package roots"
-    }
 
-    Copy-Item -LiteralPath (Join-Path $runtimeDirectory 'LICENSE.TXT') -Destination (Join-Path $Destination 'DOTNET-LICENSE.txt')
-    Copy-Item -LiteralPath (Join-Path $runtimeDirectory 'THIRD-PARTY-NOTICES.TXT') -Destination (Join-Path $Destination 'DOTNET-THIRD-PARTY-NOTICES.txt')
+    $netCore = Find-RuntimePackDirectory 'Microsoft.NETCore.App.Runtime.win-x64' $deps $packageRoots $depsPath
+    Copy-Item -LiteralPath (Join-Path $netCore 'LICENSE.TXT') -Destination (Join-Path $Destination 'DOTNET-LICENSE.txt')
+    Copy-Item -LiteralPath (Join-Path $netCore 'THIRD-PARTY-NOTICES.TXT') -Destination (Join-Path $Destination 'DOTNET-THIRD-PARTY-NOTICES.txt')
+
+    # The window ships WPF, so the desktop runtime pack is redistributed too and
+    # its licence has to travel with it. This pack carries a bare LICENSE file
+    # and no separate notices file, unlike the base runtime pack.
+    $desktop = Find-RuntimePackDirectory 'Microsoft.WindowsDesktop.App.Runtime.win-x64' $deps $packageRoots $depsPath
+    Copy-Item -LiteralPath (Join-Path $desktop 'LICENSE') -Destination (Join-Path $Destination 'DOTNET-WINDOWSDESKTOP-LICENSE.txt')
 }
 
 Assert-SigningParameters
@@ -254,14 +276,22 @@ New-Item -ItemType Directory -Force -Path $publishDirectory | Out-Null
 try {
     Write-Host "Publishing Patchthrough $Version for win-x64"
     Invoke-Checked 'dotnet' 'restore' $project '--runtime' 'win-x64' '--nologo'
+    # Not single-file. Two executables share this directory, and a single-file
+    # bundle is one executable by definition: bundling both would embed the whole
+    # capture and transcription stack twice and roughly double the download.
     Invoke-Checked 'dotnet' 'publish' $project '--configuration' 'Release' '--runtime' 'win-x64' '--self-contained' 'true' '--output' $publishDirectory '--no-restore' '--nologo' `
-        "-p:Version=$Version" '-p:PublishSingleFile=true' '-p:IncludeNativeLibrariesForSelfExtract=true' `
-        '-p:EnableCompressionInSingleFile=true' '-p:PublishTrimmed=false' '-p:DebugSymbols=false' '-p:DebugType=None' `
+        "-p:Version=$Version" '-p:PublishTrimmed=false' '-p:DebugSymbols=false' '-p:DebugType=None' `
         '-p:IncludeSourceRevisionInInformationalVersion=false'
 
+    # Both executables, because each is a way in that a user or a script relies
+    # on: the app is what the Start menu and sign-in launch, and the console tool
+    # is what a terminal and the acceptance checklist run.
+    $publishedApp = Join-Path $publishDirectory 'PatchthroughApp.exe'
     $publishedExe = Join-Path $publishDirectory 'Patchthrough.exe'
-    if (-not (Test-Path -LiteralPath $publishedExe -PathType Leaf)) {
-        throw "dotnet publish did not produce $publishedExe"
+    foreach ($required in @($publishedApp, $publishedExe)) {
+        if (-not (Test-Path -LiteralPath $required -PathType Leaf)) {
+            throw "dotnet publish did not produce $required"
+        }
     }
 
     Copy-Item -LiteralPath (Join-Path $repoRoot 'LICENSE') -Destination (Join-Path $publishDirectory 'LICENSE.txt')
@@ -269,6 +299,7 @@ try {
     Copy-Item -LiteralPath (Join-Path $scriptDirectory 'THIRD-PARTY-NOTICES.txt') -Destination $publishDirectory
     Copy-Item -LiteralPath (Join-Path $scriptDirectory 'APACHE-2.0.txt') -Destination $publishDirectory
     Copy-DotnetNotices $publishDirectory
+    Invoke-AuthenticodeSign $publishedApp
     Invoke-AuthenticodeSign $publishedExe
 
     [System.IO.Compression.ZipFile]::CreateFromDirectory(

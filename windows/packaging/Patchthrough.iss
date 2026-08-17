@@ -15,7 +15,10 @@
 #endif
 
 #define AppName "Patchthrough"
+; The console tool, which owns the command line and the PATH entry.
 #define AppExeName "Patchthrough.exe"
+; The window and the tray icon, which is what a person launches.
+#define AppGuiExeName "PatchthroughApp.exe"
 #define AppPublisher "Nico Herrera"
 #define AppUrl "https://github.com/nico-herrera/patchthrough"
 
@@ -37,7 +40,7 @@ DefaultDirName={autopf}\Patchthrough
 DefaultGroupName=Patchthrough
 DisableProgramGroupPage=yes
 LicenseFile={#RepoRoot}\LICENSE
-UninstallDisplayIcon={app}\{#AppExeName}
+UninstallDisplayIcon={app}\{#AppGuiExeName}
 OutputDir={#OutputDir}
 OutputBaseFilename=Patchthrough-windows-x64-setup
 SetupIconFile={#RepoRoot}\windows\packaging\patchthrough.ico
@@ -55,6 +58,15 @@ SetupLogging=yes
 
 [Tasks]
 Name: "addtopath"; Description: "Add Patchthrough to my user PATH"; GroupDescription: "Command line:"; Flags: checkedonce
+; Checked by default. Patchthrough records meetings, so it has to be running
+; before a meeting starts, and a recorder the user must remember to launch is a
+; recorder that misses the first minute.
+Name: "startatlogin"; Description: "Start Patchthrough when I sign in"; GroupDescription: "Startup:"
+
+[Icons]
+; Without this the install leaves no way to launch the app. It is a tray
+; application, so there is no file a user would think to open.
+Name: "{autoprograms}\{#AppName}"; Filename: "{app}\{#AppGuiExeName}"; Comment: "Record a meeting and hand the transcript to your agent"
 
 [Files]
 Source: "{#PublishDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
@@ -62,6 +74,18 @@ Source: "{#PublishDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs
 [Registry]
 Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\App Paths\{#AppExeName}"; ValueType: string; ValueName: ""; ValueData: "{app}\{#AppExeName}"; Flags: uninsdeletekey
 Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\App Paths\{#AppExeName}"; ValueType: string; ValueName: "Path"; ValueData: "{app}"; Flags: uninsdeletekey
+; Start at sign-in. The value name must stay "Patchthrough": LoginLaunch.cs reads
+; and writes the same name, so the Settings toggle and this entry are one setting
+; rather than two that disagree. The path is quoted because the default install
+; directory sits under a name with a space in it. uninsdeletevalue matters as
+; much as the write: a leftover entry would launch a deleted executable at every
+; sign-in, which Windows reports to the user as a failed startup item.
+Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: string; ValueName: "Patchthrough"; ValueData: """{app}\{#AppGuiExeName}"""; Flags: uninsdeletevalue; Tasks: startatlogin
+
+[Run]
+; Offered, not forced. Nothing about the install needs the app running, but a
+; user who just installed a tray application expects to see it appear.
+Filename: "{app}\{#AppGuiExeName}"; Description: "Start Patchthrough now"; Flags: nowait postinstall skipifsilent
 
 [Code]
 const

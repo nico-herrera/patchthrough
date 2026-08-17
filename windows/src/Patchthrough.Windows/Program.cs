@@ -1,4 +1,3 @@
-using NAudio.CoreAudioApi;
 using Patchthrough.Core;
 using Patchthrough.Windows;
 using Patchthrough.Windows.Transcription;
@@ -76,13 +75,12 @@ static async Task<int> BenchmarkAsync(IReadOnlyDictionary<string, string> option
     if (!options.TryGetValue("audio", out var audio) || string.IsNullOrWhiteSpace(audio))
         throw new ArgumentException("benchmark requires --audio <file>");
     if (!File.Exists(audio)) throw new FileNotFoundException("benchmark audio does not exist", audio);
-    var name = options.GetValueOrDefault("engine", "parakeet").ToLowerInvariant();
-    ITranscriptionEngine engine = name switch
+    var name = options.GetValueOrDefault("engine", EngineCatalog.Parakeet).ToLowerInvariant();
+    if (!EngineCatalog.Known.Contains(name))
     {
-        "parakeet" => new ParakeetEngine(),
-        "whisper" => new WhisperEngine(),
-        _ => throw new ArgumentException("engine must be parakeet or whisper"),
-    };
+        throw new ArgumentException("engine must be parakeet or whisper");
+    }
+    var engine = EngineCatalog.Create(name);
     var quality = options.GetValueOrDefault("quality", "standard") switch
     {
         "standard" => QualityMode.Standard,
@@ -122,45 +120,31 @@ static async Task<int> TranscribeAsync(
     Config config,
     string? projectOverride)
 {
-    var profile = QualityProfile.Load();
-    var mode = config.TranscriptionQualityMode;
-    var engines = profile.Engines(config.TranscriptionEngine, mode).Select(name =>
-        name.ToLowerInvariant() switch
-        {
-            "parakeet" => (ITranscriptionEngine)new ParakeetEngine(),
-            "whisper" => new WhisperEngine(),
-            _ => throw new InvalidOperationException($"unknown transcription engine: {name}"),
-        }).ToList();
-    var project = !string.IsNullOrWhiteSpace(projectOverride)
-        ? Config.ExpandHome(projectOverride)
-        : config.TranscriptionProjectDirectory;
-    var context = new TranscriptionContext(mode, ProjectVocabulary.Collect(project));
-    var pipeline = new TranscriptionPipeline(
-        engines, mode, profile, context, config.DedupMicEcho);
-    try
+    // One transcriber for the whole run, so a model loads once rather than per
+    // session.
+    await using var transcriber = SessionTranscriber.Create(config, projectOverride);
+    var failed = 0;
+    foreach (var session in sessions)
     {
-        var failed = 0;
-        foreach (var session in sessions)
+        try { await transcriber.RunAsync(session); }
+        catch (Exception error)
         {
-            try { await pipeline.RunAsync(session); }
-            catch (Exception error)
-            {
-                failed++;
-                Console.Error.WriteLine($"{Path.GetFileName(session)}: {error.Message}");
-            }
+            failed++;
+            Console.Error.WriteLine($"{Path.GetFileName(session)}: {error.Message}");
         }
-        return failed == 0 ? 0 : 1;
     }
-    finally
-    {
-        foreach (var engine in engines) await engine.DisposeAsync();
-    }
+    return failed == 0 ? 0 : 1;
 }
 
 static string Record(string root, string? name)
 {
-    Directory.CreateDirectory(root);
-    using var recorder = new Recorder(root);
+    using var recording = new RecordingService();
+
+    // A device that dies mid-meeting is reported as it happens, not at stop. An
+    // hour of silence the user could have fixed in seconds is the failure worth
+    // interrupting for.
+    recording.TrackFailed += (track, error) =>
+        Console.Error.WriteLine($"warning: the {track} track stopped early: {error.Message}");
 
     // Ctrl+C has to stop the recording rather than kill the process, or the
     // audio stays on disk with a provisional meta.json and no transcript.
@@ -171,79 +155,35 @@ static string Record(string root, string? name)
         stopping.Set();
     };
 
-    recorder.Start();
-    Console.Error.WriteLine($"recording to {recorder.Directory}");
+    var session = recording.Start(root);
+    Console.Error.WriteLine($"recording to {session.Directory}");
     Console.Error.WriteLine("press Ctrl+C or Enter to stop");
 
     var reader = Task.Run(() => Console.ReadLine());
     WaitHandle.WaitAny([stopping.WaitHandle, ((IAsyncResult)reader).AsyncWaitHandle]);
-    recorder.Stop(name);
+    var directory = recording.Stop(name);
     Console.Error.WriteLine("stopped");
-    return recorder.Directory;
+    return directory;
 }
 
 static int Doctor(string root, Config config)
 {
-    var ok = true;
-
-    Console.WriteLine($"{Mark(Directory.Exists(root))} recordings  {root}");
-    Console.WriteLine($"{Mark(true)} config      {Config.DefaultPath}");
-
-    // A capture device is the microphone. Windows gates microphone access for
-    // desktop applications behind one privacy setting, and a denied device
-    // reports as absent here.
-    var devices = new MMDeviceEnumerator();
-    var capture = Count(devices, DataFlow.Capture);
-    ok &= Report(capture > 0, $"microphone  {capture} capture device(s)",
-        "no capture device. Check Settings, Privacy & security, Microphone");
-
-    // Loopback needs no permission on Windows. It needs something to play into.
-    var render = Count(devices, DataFlow.Render);
-    ok &= Report(render > 0, $"system audio {render} playback device(s)",
-        "no playback device, so there is nothing to capture");
-
-    if (!config.TranscriptionEnabled)
+    var checks = DoctorReport.Collect(root, config);
+    foreach (var check in checks)
     {
-        Console.WriteLine($"{Mark(true)} transcription disabled in the config");
-    }
-    else
-    {
-        var names = QualityProfile.Load().Engines(config.TranscriptionEngine, config.TranscriptionQualityMode);
-        Console.WriteLine($"{Mark(true)} transcription {string.Join(" + ", names)} ({config.TranscriptionQualityMode})");
-        var missing = ModelStore.Default.Missing();
-        if (names.Contains("parakeet") && missing.Count > 0)
-            Console.WriteLine($"○ model       Parakeet will download and verify on first use ({ModelStore.Default.Directory})");
-        if (names.Contains("whisper") && !File.Exists(WhisperModelStore.Default.Path))
-            Console.WriteLine($"○ model       Whisper will download and verify on first use ({WhisperModelStore.Default.Directory})");
-    }
-
-    // A pending session is one the CLI cannot hand off yet.
-    var pending = TranscriptionPipeline.Pending(root).Count;
-    if (pending > 0) Console.WriteLine($"○ pending     {pending} session(s) not transcribed. Run: Patchthrough transcribe");
-
-    return ok ? 0 : 1;
-
-    static int Count(MMDeviceEnumerator devices, DataFlow flow)
-    {
-        try
+        Console.WriteLine($"{Mark(check.Severity)} {check.Label,-12} {check.Detail}");
+        // A remedy prints for anything that is not already fine, which covers
+        // both a fault to fix and a pending session to transcribe. A check that
+        // passes has nothing to add.
+        if (check.Severity != DoctorSeverity.Ok && check.Remedy is not null)
         {
-            return devices.EnumerateAudioEndPoints(flow, DeviceState.Active).Count;
-        }
-        catch (Exception)
-        {
-            return 0;
+            Console.WriteLine($"  {check.Remedy}");
         }
     }
-
-    static bool Report(bool good, string line, string remedy)
-    {
-        Console.WriteLine($"{Mark(good)} {line}");
-        if (!good) Console.WriteLine($"  {remedy}");
-        return good;
-    }
+    return DoctorReport.CanRecord(checks) ? 0 : 1;
 }
 
-static string Mark(bool good) => good ? "✓" : "○";
+static string Mark(DoctorSeverity severity) => severity == DoctorSeverity.Ok ? "\u2713" : "\u25cb";
 
 static Dictionary<string, string> ParseOptions(IEnumerable<string> args)
 {

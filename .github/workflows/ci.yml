@@ -18,6 +18,16 @@ jobs:
           node-version: 22
       - name: Verify shared contracts
         run: node tools/verify-contracts.mjs
+      # WPF resolves a binding path at run time, so a typo compiles cleanly and
+      # renders an empty control. This runs anywhere, which matters because the
+      # Windows interface is written on macOS.
+      - name: Verify XAML binding paths
+        run: node tools/verify-xaml-bindings.mjs
+      # x:Static assigns without a type converter, so a design token with the
+      # wrong type compiles everywhere and throws when the BAML loads, on
+      # Windows only. The first CI render of the interface found exactly that.
+      - name: Verify XAML value types
+        run: node tools/verify-xaml-values.mjs
       - name: Exercise release-gate scorer
         run: node quality/score.mjs --manifest quality/fixtures/corpus.json --candidate quality/fixtures/candidate.json --baseline quality/fixtures/baseline.json --out /tmp/patchthrough-score.json
       - name: Test private review packet generator
@@ -42,6 +52,16 @@ jobs:
           dotnet-version: 8.0.x
       - name: Verify shared contracts
         run: node tools/verify-contracts.mjs
+      # WPF resolves a binding path at run time, so a typo compiles cleanly and
+      # renders an empty control. This runs anywhere, which matters because the
+      # Windows interface is written on macOS.
+      - name: Verify XAML binding paths
+        run: node tools/verify-xaml-bindings.mjs
+      # x:Static assigns without a type converter, so a design token with the
+      # wrong type compiles everywhere and throws when the BAML loads, on
+      # Windows only. The first CI render of the interface found exactly that.
+      - name: Verify XAML value types
+        run: node tools/verify-xaml-values.mjs
       - name: Exercise release-gate scorer
         run: node quality/score.mjs --manifest quality/fixtures/corpus.json --candidate quality/fixtures/candidate.json --baseline quality/fixtures/baseline.json --out patchthrough-score.json
       - name: Test private review packet generator
@@ -58,6 +78,21 @@ jobs:
       - name: Verify session contract
         shell: pwsh
         run: windows/verify-contract.ps1
+      # The interface is written on macOS, where WPF compiles but cannot run, so a
+      # compile proves nothing about how it looks. This renders every pane to PNG
+      # from fixture sessions and uploads them, which is the only place the layout,
+      # the palette, and the type sizes can actually be reviewed.
+      - name: Render interface screenshots
+        shell: pwsh
+        env:
+          PATCHTHROUGH_UI_SCREENSHOT: ${{ runner.temp }}/ui-screenshots
+        run: dotnet run --project windows/src/Patchthrough.App -c Release --no-build
+      - name: Upload interface screenshots
+        uses: actions/upload-artifact@v4
+        with:
+          name: Patchthrough-windows-ui
+          path: ${{ runner.temp }}/ui-screenshots/*.png
+          if-no-files-found: error
       - name: Install verified Inno Setup compiler
         uses: ./.github/actions/inno-setup
         with:

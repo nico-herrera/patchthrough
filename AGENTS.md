@@ -61,9 +61,13 @@ on-disk session format (`schemas/session-v1.md`):
 - `cli/` — the npm package: `bin/patchthrough.js` (executable arg parser),
   `src/patchthrough.js` (library: sessions, staging, agents, web targets),
   `test/patchthrough.test.js` (node:test), `verify.js` (package invariants).
-- `windows/` — `Patchthrough.Core` (portable session/transcription logic),
-  `Patchthrough.Windows` (WASAPI, AAC, model adapters, console entry point),
+- `windows/` — `Patchthrough.Core` (portable session/transcription logic, the
+  session index, the config writer, the transcription queue),
+  `Patchthrough.Windows` (WASAPI, AAC, model adapters, recording and doctor
+  services, console entry point), `Patchthrough.App` (WPF tray icon and window),
   xUnit tests, the cross-platform session fixture, and Windows release tooling.
+  A publish of `Patchthrough.App` emits both `Patchthrough.exe` (console) and
+  `PatchthroughApp.exe` (window) into one self-contained directory.
   `windows/Directory.Build.props` enables NuGet lock files and locked restore
   for every project. `windows/packaging/` builds the self-contained x64 ZIP and
   per-user installer.
@@ -71,7 +75,13 @@ on-disk session format (`schemas/session-v1.md`):
   consensus, and corpus-run tests.
 - `models/registry.json` — cross-platform model metadata, size budgets, hashes,
   and system-asset declarations. `tools/verify-contracts.mjs` validates it with
-  the shared transcript and quality fixtures.
+  the shared transcript and quality fixtures. `tools/verify-xaml-bindings.mjs`
+  checks that every binding path in the Windows app's XAML names a member that
+  exists, which the compiler cannot: WPF resolves a path at run time, so a typo
+  renders an empty control instead of failing. `tools/verify-xaml-values.mjs`
+  checks that every design token a XAML attribute consumes has the type the
+  property needs: x:Static skips the type converter, so a mismatch throws at
+  load, on Windows only.
 - `quality/` — corrected-corpus schemas, fixtures, release-gate scoring, corpus
   bootstrap, and the private browser review-packet generator. Do not commit
   private corpus audio or generated review packets.
@@ -128,6 +138,8 @@ or quality changes:
 
 ```bash
 node tools/verify-contracts.mjs
+node tools/verify-xaml-bindings.mjs
+node tools/verify-xaml-values.mjs
 node quality/score.mjs --manifest quality/fixtures/corpus.json \
   --candidate quality/fixtures/candidate.json \
   --baseline quality/fixtures/baseline.json --out /tmp/patchthrough-score.json

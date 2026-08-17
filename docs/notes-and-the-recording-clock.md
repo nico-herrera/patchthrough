@@ -98,9 +98,15 @@ must agree:
 
 ## Platforms
 
-The macOS app writes notes; the app and the npm CLI both render them. The Windows
-recorder does neither — it has no notes surface yet, so a Windows-recorded session has
-nothing to render. That is a gap in what the Windows recorder *produces*, not a
-divergence in the format. When it grows a notes surface,
-`windows/src/Patchthrough.Core/HandoffDocument.cs` needs the section and a clock helper
-alongside it. See `windows/README.md`, "Shared prose".
+Both platforms now write notes and both render them, as does the npm CLI. The Windows
+side is `windows/src/Patchthrough.Core/SessionNotes.cs`, with the section rendered by
+`HandoffDocument.NotesSection` and the label produced by `Transcript.Clock`, which floors
+the way this document requires.
+
+The Windows recorder persists `audio_start` as of the tray app. It always computed the
+value, because the per-track offsets are derived from it, but until then it was thrown
+away, which left a Windows session with nothing to convert a wall-clock instant into
+transcript time. `Recorder.Stop` now passes it to `SessionWriter.WriteFinalMeta`.
+
+One inaccuracy above does not apply on Windows: `TrackRecorder` locks around
+`FirstBufferAt`, so the anchor is not read across threads unsynchronized there.

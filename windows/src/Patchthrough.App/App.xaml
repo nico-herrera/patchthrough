@@ -1,0 +1,16 @@
+<Application x:Class="Patchthrough.App.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             ShutdownMode="OnExplicitShutdown">
+  <!-- No StartupUri. This app starts in the tray with no window, and the window
+       is created on demand. ShutdownMode has to match: the default closes the
+       app when the last window closes, which for a tray app means closing the
+       window quits it. -->
+  <Application.Resources>
+    <ResourceDictionary>
+      <ResourceDictionary.MergedDictionaries>
+        <ResourceDictionary Source="Theme/Controls.xaml" />
+      </ResourceDictionary.MergedDictionaries>
+    </ResourceDictionary>
+  </Application.Resources>
+</Application>

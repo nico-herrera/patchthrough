@@ -17,9 +17,13 @@ Milestone 1 is partly built. Be careful about what is verified here.
 | Parakeet through sherpa-onnx | written | compiles and model-free tests pass; hardware/model smoke is scheduled/manual |
 | Whisper Large v3 Turbo Q5 through Whisper.net | written | compiles; probes Vulkan, CPU, then CPU-no-AVX; hardware/model smoke pending |
 | Model download | done in code | resumable and pinned SHA-256 verification; real Windows download/load pending |
-| Portable ZIP and per-user installer | done in code | Windows CI builds the self-contained x64 executable, installs it, runs it, uninstalls it, and verifies SHA-256 files |
+| Portable ZIP and per-user installer | done in code | Windows CI builds the self-contained x64 directory, installs it, runs the console tool, uninstalls it, and verifies SHA-256 files |
 | Authenticode signature | wired, not credentialed | release script signs the app and installer when given a certificate thumbprint; no public certificate is configured yet |
-| Tray application | not started | milestone 2 |
+| Session list, config writer, transcription queue | done | unit tests on any platform, including a macOS run |
+| Recording, transcription and doctor as services | written | **compiles only.** The console verbs call the same code, so a hardware run exercises it |
+| Tray application and window | written | **compiles only.** Windows CI renders every pane to PNG; the layout has not been reviewed on a real display yet |
+| Patch through: agents, chat sites, staging, clipboard | written | staging, prompts, destinations and agent discovery are unit tested; launching needs a Windows run |
+| Notes during a meeting, and `audio_start` | done | unit tested, and `verify-contract.sh` rebuilds the document with the real npm CLI and compares it byte for byte |
 
 The hardware rows remain the risk. A cross-compiled Windows binary and model-free
 tests prove APIs and contracts, not capture, codecs, GPU selection, or inference on a
@@ -37,6 +41,16 @@ on macOS and Linux through `EnableWindowsTargeting`, which type-checks every
 call into NAudio. A compile is not a run. Nobody has yet confirmed that this
 code captures a single sample.
 
+`Patchthrough.App` targets `net8.0-windows` and holds the window and the tray
+icon. It builds on macOS and Linux too, XAML included, through the same
+`EnableWindowsTargeting`. It references `Patchthrough.Windows`, so publishing the
+app emits both executables into one directory.
+
+Both Windows projects are driven through services rather than through the console
+entry point: `RecordingService`, `SessionTranscriber`, `TranscriptionQueue`,
+`SessionIndex`, and `DoctorReport`. The console verbs and the window call the same
+code, so a hardware run of `rec` exercises what the tray button does.
+
 ## Build and check
 
 ```sh
@@ -44,6 +58,20 @@ cd windows
 dotnet test              # the session format and the padding arithmetic
 ./verify-contract.sh     # writes a session, then reads it with the npm CLI
 ```
+
+`node tools/verify-xaml-bindings.mjs` is worth running after any change to the
+window. WPF resolves a binding path at run time, so a mistyped one compiles and
+then renders an empty control, and this interface is written on a machine that
+cannot run it. The check reads the XAML and the viewmodels and fails when a path
+has nowhere to land.
+
+`node tools/verify-xaml-values.mjs` guards the other run-time trap: `x:Static`
+assigns a token without a type converter, so a `CornerRadius` fed a double
+token, or a markup extension embedded inside an attribute string, compiles
+everywhere and throws XamlParseException at load, on Windows only. The first
+CI render of the interface crashed on exactly this, which is why every token a
+XAML `CornerRadius`, `Thickness`, or grid length consumes now lives in
+`PT.R`, `PT.T`, or `PT.G` with the right type.
 
 `verify-contract.sh` is the interesting one. It generates a session with the
 real `Patchthrough.Core` code path and hands it to `cli/bin/patchthrough.js`,
@@ -59,7 +87,7 @@ windows\packaging\verify-release.ps1 -ExpectedVersion 1.4.0
 ```
 
 The release build uses locked NuGet dependency graphs and produces a self-contained
-single-file executable. A user does not need to install .NET. The output is:
+directory holding both executables. A user does not need to install .NET. The output is:
 
 ```text
 dist\Patchthrough-windows-x64.zip
@@ -151,8 +179,9 @@ no audio file.
 
 | Concern | Choice | Reason |
 |---|---|---|
-| Language | C# on .NET 8 | Best access to WASAPI, tray, and single-file publish |
-| Projects | `Patchthrough.Core` (net8.0) and `Patchthrough.App` (net8.0-windows) | Core stays testable on any platform. Only the shell needs Windows |
+| Language | C# on .NET 8 | Best access to WASAPI, the tray, and a self-contained publish |
+| Projects | `Patchthrough.Core` (net8.0), `Patchthrough.Windows` (net8.0-windows), `Patchthrough.App` (net8.0-windows) | Core stays testable on any platform. `Patchthrough.Windows` holds the audio and the console tool. `Patchthrough.App` holds the window |
+| Executables | `Patchthrough.exe` console, `PatchthroughApp.exe` window, one shared directory | A console executable flashes a console window at sign-in. A graphical one does not hold a shell, so `rec` and Ctrl+C stop working from a terminal. Neither compromise is needed: publishing the app emits both, sharing one runtime |
 | Audio | NAudio: `WasapiCapture` and `WasapiLoopbackCapture` | Maintained, and it wraps the APIs this needs |
 | Container | AAC in MP4 through Media Foundation | Same codec the macOS app already writes |
 | Transcription | sherpa-onnx with Parakeet TDT 0.6B v2, int8 | Same model family as macOS, and it returns token timings |
@@ -166,12 +195,16 @@ no audio file.
 1. **A session the CLI can read.** Console only, no window. Two-track capture,
    transcription, and a valid session directory. Ships as a zip.
 2. **The tray app.** Start and stop, recording state, a sessions window, and
-   settings.
-3. **Handoffs.** Agents through Windows Terminal, the clipboard, chat sites,
-   and deep links.
-4. **Distribution.** The portable ZIP and per-user installer are implemented.
-   Authenticode credentials, public release publication, and self-exclusion from the
-   loopback capture remain.
+   settings. The services under it are built and tested; the interface is being
+   built on top of them.
+3. **Handoffs.** Agents through Windows Terminal, the clipboard, and chat sites.
+   Built. Windows never auto-pastes: a synthesized keystroke has no reliable focus
+   guarantee here, so the user pastes and the status line says so. The npm CLI
+   refuses for the same reason.
+4. **Distribution.** The portable ZIP and per-user installer are implemented,
+   with a Start menu entry and an optional start at sign-in. Authenticode
+   credentials, public release publication, and self-exclusion from the loopback
+   capture remain.
 
 ## Risks to design for, not to discover
 
@@ -184,6 +217,14 @@ two minutes, and play audio only in the middle minute.
 **The transcription models are large.** They are about 600 MB and download
 once. Verify them against a recorded hash, the way `packaging/verify-models.sh`
 does for macOS.
+
+**The transcription packages ship natives this build cannot load.** Whisper.net's
+runtime packages add Linux, 32-bit Windows and ARM64 Windows binaries without
+conditioning them on the target runtime, and one release shipped 61 MB of Linux
+objects before anyone noticed. `DropUnloadableNativeLibraries` in
+`Patchthrough.Windows.csproj` removes anything whose architecture is not this
+build's, and `verify-release.ps1` asserts the result so a package update cannot put
+them back quietly.
 
 **Windows N editions have no AAC encoder.** Report it in the doctor check, and
 fall back to PCM in WAV. The `files` map makes that legal.
@@ -198,12 +239,19 @@ meeting ends the capture. Handle it, or say so in the doctor check.
 
 The handoff prompts exist three times, in `Sources/patchthrough/Handoff.swift`,
 in `cli/src/patchthrough.js`, and in
-`windows/src/Patchthrough.Core/HandoffDocument.cs`. All three carry a comment
-that says to keep them in step.
+`windows/src/Patchthrough.Core/HandoffDocument.cs` plus
+`windows/src/Patchthrough.Core/HandoffPrompt.cs`. All of them carry a comment
+that says to keep them in step. `HandoffPrompt` holds the two prompts that travel
+with a handoff rather than inside the document: the one an agent reads in a
+repository, and the one a chat composer receives with the file attached.
 
-One section is deliberately not in all three. The `## Notes` section exists in
-the Swift app and the CLI only, because notes are written by the macOS recorder
-and a Windows-recorded session has none to render. That is a gap in what the
-Windows recorder *produces*, not a divergence in the format — when it grows a
-notes surface, `HandoffDocument.Build` needs the section and the clock helper
-alongside it.
+The `## Notes` section now exists on every platform. The Windows side is
+`SessionNotes.cs` plus `HandoffDocument.NotesSection`, and `verify-contract.sh`
+rebuilds the document with the real npm CLI from the same session and compares it
+byte for byte, so a wording drift in either renderer fails the build rather than
+shipping.
+
+Exactly one wording differs on purpose. The macOS and CLI copies say "the audio the
+Mac played" in the speakers line, which is false in a document this recorder wrote,
+so the Windows text says "this machine" instead. `verify-contract.sh` asserts both
+halves of that exception, so it cannot quietly widen into a real divergence.

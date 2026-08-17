@@ -16,17 +16,37 @@ public sealed class Recorder : IDisposable
     private readonly SessionWriter _session;
     private readonly TrackRecorder _mic;
     private readonly TrackRecorder _system;
+    private bool _started;
     private bool _stopped;
 
     public string Directory => _session.Directory;
+
+    /// <summary>
+    /// When this session started, for an elapsed clock. A caller that ticks a
+    /// display reads this rather than being sent a value every second.
+    /// </summary>
+    public DateTimeOffset StartedAt => _session.StartedAt;
+
+    /// <summary>Started and not stopped. False before <see cref="Start"/>.</summary>
+    public bool IsRecording => _started && !_stopped;
+
+    /// <summary>
+    /// A track stopped on its own, named "mic" or "system". Forwarded from the
+    /// tracks so one subscription covers both.
+    ///
+    /// **Raised on the capture thread.**
+    /// </summary>
+    public event Action<string, Exception>? TrackFailed;
 
     public Recorder(string recordingsRoot)
     {
         _session = SessionWriter.Create(recordingsRoot);
         // The default devices. A device that changes mid-meeting ends its
-        // stream, which Doctor reports and a later milestone handles.
+        // stream, which Doctor reports and TrackFailed surfaces live.
         _mic = new TrackRecorder(new WasapiCapture());
         _system = new TrackRecorder(new WasapiLoopbackCapture());
+        _mic.Failed += error => TrackFailed?.Invoke("mic", error);
+        _system.Failed += error => TrackFailed?.Invoke("system", error);
     }
 
     /// <summary>
@@ -53,6 +73,7 @@ public sealed class Recorder : IDisposable
         _session.AddTrack("mic", "mic.wav");
         _session.AddTrack("system", "system.wav");
         _session.WriteProvisionalMeta();
+        _started = true;
     }
 
     /// <summary>
@@ -76,7 +97,10 @@ public sealed class Recorder : IDisposable
 
         _session.AddTrack("mic", Encode(_mic), Offset(micStart, earliest));
         _session.AddTrack("system", Encode(_system), Offset(systemStart, earliest));
-        _session.WriteFinalMeta(name: name);
+        // `earliest` is the transcript's zero. It used to be computed here for the
+        // offsets and then discarded, which left nothing on disk to convert a
+        // wall-clock instant into transcript time. Notes need exactly that.
+        _session.WriteFinalMeta(name: name, audioStart: earliest);
     }
 
     private static int Offset(DateTimeOffset track, DateTimeOffset earliest) =>

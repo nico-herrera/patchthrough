@@ -1,0 +1,537 @@
+<Window x:Class="Patchthrough.App.Shell.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
+        xmlns:th="clr-namespace:Patchthrough.App.Theme"
+        xmlns:c="clr-namespace:Patchthrough.App.Controls"
+        xmlns:vm="clr-namespace:Patchthrough.App.ViewModels"
+        Title="Patchthrough"
+        Width="{x:Static th:PT+M.WindowDefaultWidth}"
+        Height="{x:Static th:PT+M.WindowDefaultHeight}"
+        MinWidth="{x:Static th:PT+M.WindowMinWidth}"
+        MinHeight="{x:Static th:PT+M.WindowMinHeight}"
+        Background="{x:Static th:PT+C.WindowBrush}"
+        Foreground="{x:Static th:PT+C.TextBrush}"
+        FontFamily="{x:Static th:PT+F.Ui}"
+        UseLayoutRounding="True"
+        TextOptions.TextFormattingMode="Ideal"
+        WindowStartupLocation="CenterScreen">
+
+  <!--
+    The titlebar is drawn by the app, not by Windows. A 52 unit strip carrying the
+    mark and the record control cannot come from the system caption, and
+    WindowChrome is what hands the caption area over while keeping the frame the
+    desktop owns: the drop shadow, snap, and the rounded corners on Windows 11.
+    GlassFrameThickness stays at zero so no system glass shows through the strip.
+  -->
+  <shell:WindowChrome.WindowChrome>
+    <shell:WindowChrome CaptionHeight="{x:Static th:PT+M.TitleBarHeight}"
+                        ResizeBorderThickness="6"
+                        GlassFrameThickness="0"
+                        CornerRadius="0"
+                        UseAeroCaptionButtons="False" />
+  </shell:WindowChrome.WindowChrome>
+
+  <Window.Resources>
+    <ResourceDictionary>
+      <ResourceDictionary.MergedDictionaries>
+        <ResourceDictionary Source="DetailTemplates.xaml" />
+      </ResourceDictionary.MergedDictionaries>
+
+
+    <!-- A caption button. Deliberately not the app's chip style: this is system
+         chrome, and Windows users reach for a specific shape in a specific
+         corner. The close button's red hover is the platform's convention and is
+         the one place outside rule 2 that red appears, for the same reason the
+         traffic lights are an exception on macOS. -->
+    <Style x:Key="CaptionButton" TargetType="Button">
+      <Setter Property="Width" Value="{x:Static th:PT+M.CaptionButtonWidth}" />
+      <Setter Property="Height" Value="{x:Static th:PT+M.TitleBarHeight}" />
+      <Setter Property="Foreground" Value="{x:Static th:PT+C.Text3Brush}" />
+      <Setter Property="FontFamily" Value="{x:Static th:PT+F.Glyph}" />
+      <Setter Property="FontSize" Value="{x:Static th:PT+F.MonoTiny}" />
+      <Setter Property="shell:WindowChrome.IsHitTestVisibleInChrome" Value="True" />
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="Button">
+            <Border x:Name="Fill" Background="Transparent">
+              <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+            </Border>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsMouseOver" Value="True">
+                <Setter TargetName="Fill" Property="Background" Value="{x:Static th:PT+C.RaisedBrush}" />
+                <Setter Property="Foreground" Value="{x:Static th:PT+C.TextBrush}" />
+              </Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+
+    <Style x:Key="CloseButton" TargetType="Button" BasedOn="{StaticResource CaptionButton}">
+      <Style.Triggers>
+        <Trigger Property="IsMouseOver" Value="True">
+          <Setter Property="Foreground" Value="{x:Static th:PT+C.OnSignalBrush}" />
+        </Trigger>
+      </Style.Triggers>
+    </Style>
+
+    <!-- Sidebar row -->
+
+    <DataTemplate x:Key="SessionRow" DataType="{x:Type vm:SessionItemViewModel}">
+      <!-- Selection is a filled row with a ring, radius 7. Never a coloured
+           leading edge bar: that is design rule 4. -->
+      <Border x:Name="Row" Background="Transparent" BorderThickness="{x:Static th:PT+T.Hairline}"
+              BorderBrush="Transparent"
+              CornerRadius="{x:Static th:PT+R.Row}"
+              Padding="{x:Static th:PT+T.SidebarRowContent}">
+        <Border.InputBindings>
+          <MouseBinding MouseAction="LeftClick"
+                        Command="{Binding DataContext.SelectCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                        CommandParameter="{Binding}" />
+        </Border.InputBindings>
+        <Border.ContextMenu>
+          <ContextMenu>
+            <MenuItem Header="Rename…"
+                      Command="{Binding DataContext.BeginRenameCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                      CommandParameter="{Binding}"
+                      IsEnabled="{Binding CanEdit}" />
+            <MenuItem Header="Remove name"
+                      Command="{Binding DataContext.RemoveNameCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                      CommandParameter="{Binding}"
+                      IsEnabled="{Binding HasName}" />
+            <MenuItem Header="Show in Explorer"
+                      Command="{Binding DataContext.RevealSessionCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                      CommandParameter="{Binding}" />
+            <Separator />
+            <!-- Destructive, so it sits below a divider and asks before it acts.
+                 It is hidden entirely while recording: the recorder holds open
+                 file handles for both tracks. -->
+            <MenuItem Header="Move to Recycle Bin"
+                      Command="{Binding DataContext.DeleteSessionCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                      CommandParameter="{Binding}"
+                      Foreground="{x:Static th:PT+C.SignalLitBrush}"
+                      Visibility="{Binding CanEdit, Converter={StaticResource Visible}}" />
+          </ContextMenu>
+        </Border.ContextMenu>
+
+        <Grid>
+        <!-- Reading mode. -->
+        <StackPanel Visibility="{Binding IsRenaming, Converter={StaticResource VisibleWhenFalse}}">
+          <Grid>
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="*" />
+              <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <TextBlock Style="{StaticResource PT.Text.SessionTime}"
+                       Text="{Binding Title}" TextTrimming="CharacterEllipsis" />
+            <!-- The recording dot. Meaning is never carried by colour alone
+                 (rule 13): the row also says "Recording" underneath. -->
+            <Ellipse Grid.Column="1" Width="{x:Static th:PT+M.RecordDotSize}"
+                     Height="{x:Static th:PT+M.RecordDotSize}"
+                     Fill="{x:Static th:PT+C.SignalBrush}"
+                     VerticalAlignment="Center" Margin="6,0,0,0"
+                     Visibility="{Binding IsRecording, Converter={StaticResource Visible}}" />
+          </Grid>
+          <TextBlock Style="{StaticResource PT.Text.SessionLine}" Margin="0,2,0,0"
+                     Text="{Binding FirstLine}" TextTrimming="CharacterEllipsis"
+                     Visibility="{Binding ShowsTranscriptLine, Converter={StaticResource Visible}}" />
+          <TextBlock Style="{StaticResource PT.Text.Mono}" Margin="0,2,0,0"
+                     Text="{Binding Subtitle}"
+                     Visibility="{Binding ShowsTranscriptLine, Converter={StaticResource VisibleWhenFalse}}" />
+        </StackPanel>
+
+        <!-- Renaming in place, so the row keeps its position in the list. -->
+        <TextBox Visibility="{Binding IsRenaming, Converter={StaticResource Visible}}"
+                 Text="{Binding EditingName, UpdateSourceTrigger=PropertyChanged}"
+                 Tag="{Binding}"
+                 KeyDown="OnRenameKeyDown" Loaded="OnRenameBoxLoaded"
+                 LostKeyboardFocus="OnRenameLostFocus" />
+        </Grid>
+      </Border>
+      <DataTemplate.Triggers>
+        <DataTrigger Binding="{Binding IsSelected}" Value="True">
+          <Setter TargetName="Row" Property="Background" Value="{x:Static th:PT+C.SelectFillBrush}" />
+          <Setter TargetName="Row" Property="BorderBrush" Value="{x:Static th:PT+C.SelectStrokeBrush}" />
+        </DataTrigger>
+        <MultiDataTrigger>
+          <MultiDataTrigger.Conditions>
+            <Condition Binding="{Binding IsSelected}" Value="False" />
+            <Condition Binding="{Binding IsMouseOver, RelativeSource={RelativeSource Self}}" Value="True" />
+          </MultiDataTrigger.Conditions>
+          <Setter TargetName="Row" Property="Background" Value="{x:Static th:PT+C.RaisedBrush}" />
+        </MultiDataTrigger>
+      </DataTemplate.Triggers>
+    </DataTemplate>
+    </ResourceDictionary>
+  </Window.Resources>
+
+  <Grid>
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto" />
+      <RowDefinition Height="*" />
+    </Grid.RowDefinitions>
+
+    <!-- Titlebar -->
+    <Border Grid.Row="0" Height="{x:Static th:PT+M.TitleBarHeight}"
+            Background="{x:Static th:PT+C.ChromeBrush}"
+            BorderBrush="{x:Static th:PT+C.HairlineBrush}"
+            BorderThickness="{x:Static th:PT+T.BottomHairline}">
+      <Grid>
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="Auto" />
+          <ColumnDefinition Width="*" />
+          <ColumnDefinition Width="Auto" />
+          <ColumnDefinition Width="Auto" />
+        </Grid.ColumnDefinitions>
+
+        <!-- Mark and wordmark. The mark thickens while transcribing, which is the
+             same signal the tray icon carries. -->
+        <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center"
+                    Margin="{x:Static th:PT+T.TitleBarLeft}">
+          <c:MarkView Width="{x:Static th:PT+M.MarkSize}" Height="{x:Static th:PT+M.MarkSize}"
+                      Stroke="{x:Static th:PT+C.TextBrush}" x:Name="MarkGlyph" />
+          <TextBlock Style="{StaticResource PT.Text.Wordmark}" Text="Patchthrough"
+                     VerticalAlignment="Center" Margin="8,0,0,0" />
+        </StackPanel>
+
+        <!-- Transcription status, in the space between the wordmark and the
+             controls. It is text and not a spinner: rule 14 allows one animation
+             and this is not it. -->
+        <TextBlock Grid.Column="1" Style="{StaticResource PT.Text.Caption}"
+                   VerticalAlignment="Center" Margin="14,0" TextTrimming="CharacterEllipsis"
+                   Text="{Binding TranscriptionStatus}"
+                   Visibility="{Binding TranscriptionStatus, Converter={StaticResource VisibleWhenPresent}}" />
+
+        <!-- Record and settings. -->
+        <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center"
+                    shell:WindowChrome.IsHitTestVisibleInChrome="True">
+          <!-- Drag the handoff document straight into another application. Some
+               targets take a dropped file and nothing else, and a drag needs no
+               clipboard and no confirmation. Only offered for a transcribed
+               session, because there is nothing to drag otherwise. -->
+          <Border x:Name="DragChip" Margin="0,0,8,0" Cursor="Hand"
+                  Background="{x:Static th:PT+C.RaisedBrush}"
+                  BorderBrush="{x:Static th:PT+C.BorderBrush}"
+                  BorderThickness="{x:Static th:PT+T.Hairline}"
+                  CornerRadius="{x:Static th:PT+R.Control}"
+                  Padding="{x:Static th:PT+T.Chip}"
+                  ToolTip="Drag the transcript into another app"
+                  MouseMove="OnDragChipMouseMove"
+                  Visibility="{Binding CanSend, Converter={StaticResource Visible}}">
+            <StackPanel Orientation="Horizontal">
+              <TextBlock FontFamily="{x:Static th:PT+F.Glyph}" Text="&#xE8E5;"
+                         FontSize="{x:Static th:PT+F.IconSmall}"
+                         Foreground="{x:Static th:PT+C.Text3Brush}"
+                         VerticalAlignment="Center" />
+              <TextBlock Style="{StaticResource PT.Text}" Text="Drag" Margin="7,0,0,0"
+                         FontSize="{x:Static th:PT+F.Control}"
+                         Foreground="{x:Static th:PT+C.Text2Brush}"
+                         VerticalAlignment="Center" />
+            </StackPanel>
+          </Border>
+
+          <Button x:Name="RecordButton" Style="{StaticResource PT.Button.Chip}"
+                  Command="{Binding ToggleRecordingCommand}"
+                  ToolTip="{Binding RecordButtonTooltip}">
+            <StackPanel Orientation="Horizontal">
+              <!-- A circle at rest, a square while recording. The shape changes
+                   with the state, so the control never relies on colour alone. -->
+              <Ellipse Width="10" Height="10" Fill="{x:Static th:PT+C.SignalBrush}"
+                       VerticalAlignment="Center"
+                       Visibility="{Binding IsRecording, Converter={StaticResource VisibleWhenFalse}}" />
+              <Rectangle Width="10" Height="10" RadiusX="2" RadiusY="2"
+                         Fill="{x:Static th:PT+C.SignalBrush}" VerticalAlignment="Center"
+                         Visibility="{Binding IsRecording, Converter={StaticResource Visible}}" />
+              <TextBlock Style="{StaticResource PT.Text.Mono}" Margin="7,0,0,0"
+                         VerticalAlignment="Center"
+                         Foreground="{x:Static th:PT+C.SignalLitBrush}"
+                         Text="{Binding Elapsed}"
+                         Visibility="{Binding IsRecording, Converter={StaticResource Visible}}" />
+            </StackPanel>
+          </Button>
+
+          <!-- The split button. Two halves with two different jobs: the red half
+               sends to the current destination, and the chevron opens the picker.
+               Choosing in the picker only retargets this button, so browsing can
+               never launch anything. That separation is deliberate. -->
+          <Grid Margin="8,0,0,0" Height="{x:Static th:PT+M.SplitButtonHeight}"
+                Visibility="{Binding HasDestinations, Converter={StaticResource Visible}}">
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="Auto" />
+              <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <Border Grid.ColumnSpan="2" CornerRadius="{x:Static th:PT+R.Control}"
+                    Background="{x:Static th:PT+C.SignalBrush}" />
+            <Button Grid.Column="0" Style="{StaticResource PT.Button.Primary}"
+                    Command="{Binding SendCommand}"
+                    Background="Transparent"
+                    ToolTip="{Binding SendLabel}">
+              <StackPanel Orientation="Horizontal">
+                <TextBlock FontFamily="{x:Static th:PT+F.Glyph}" Text="&#xE72A;"
+                           FontSize="{x:Static th:PT+F.ButtonGlyph}"
+                           VerticalAlignment="Center" Margin="0,0,7,0" />
+                <TextBlock Text="{Binding SendLabel}" VerticalAlignment="Center" />
+              </StackPanel>
+            </Button>
+            <Button Grid.Column="1" x:Name="DestinationChevron"
+                    Width="{x:Static th:PT+M.SplitChevronWidth}"
+                    Click="OnOpenDestinations" ToolTip="Choose a destination">
+              <Button.Style>
+                <Style TargetType="Button">
+                  <Setter Property="Foreground" Value="{x:Static th:PT+C.OnSignalBrush}" />
+                  <Setter Property="Cursor" Value="Hand" />
+                  <Setter Property="Template">
+                    <Setter.Value>
+                      <ControlTemplate TargetType="Button">
+                        <Grid>
+                          <Border x:Name="Fill" Background="{x:Static th:PT+C.SignalDimBrush}"
+                                  CornerRadius="{x:Static th:PT+R.ControlRight}" />
+                          <!-- A hairline of the on-signal colour divides the halves,
+                               so the two jobs read as two controls. -->
+                          <Rectangle Width="{x:Static th:PT+M.Hairline}" HorizontalAlignment="Left"
+                                     Fill="{x:Static th:PT+C.OnSignalRuleBrush}" />
+                          <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                          <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Fill" Property="Background" Value="{x:Static th:PT+C.SignalBrush}" />
+                          </Trigger>
+                        </ControlTemplate.Triggers>
+                      </ControlTemplate>
+                    </Setter.Value>
+                  </Setter>
+                </Style>
+              </Button.Style>
+              <TextBlock FontFamily="{x:Static th:PT+F.Glyph}" Text="&#xE70D;"
+                         FontSize="{x:Static th:PT+F.Chevron}" />
+            </Button>
+          </Grid>
+
+          <Button Style="{StaticResource PT.Button.Icon}" Margin="6,0,0,0"
+                  Click="OnOpenSettings" ToolTip="Settings">
+            <!-- Segoe MDL2 Settings, a gear. The mock's glyph is a ring with
+                 radial spokes, which reads as a sun and therefore as a light and
+                 dark toggle; this app is dark only, so the affordance has to be
+                 unmistakably a gear. Same deviation the macOS app documents. -->
+            <TextBlock FontFamily="{x:Static th:PT+F.Glyph}" Text="&#xE713;"
+                       FontSize="{x:Static th:PT+F.IconSmall}" />
+          </Button>
+        </StackPanel>
+
+        <!-- System caption buttons, at the right where Windows puts them. -->
+        <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Top"
+                    Margin="{x:Static th:PT+T.TitleBarRight}">
+          <Button Style="{StaticResource CaptionButton}" Click="OnMinimize"
+                  ToolTip="Minimize" Content="&#xE921;" />
+          <Button x:Name="MaximizeButton" Style="{StaticResource CaptionButton}"
+                  Click="OnToggleMaximize" ToolTip="Maximize" Content="&#xE922;" />
+          <Button Style="{StaticResource CloseButton}" Click="OnClose"
+                  ToolTip="Close" Content="&#xE8BB;" />
+        </StackPanel>
+      </Grid>
+    </Border>
+
+    <!-- Body -->
+    <Grid Grid.Row="1">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="{x:Static th:PT+G.SidebarColumn}" />
+        <ColumnDefinition Width="*" />
+      </Grid.ColumnDefinitions>
+
+      <!-- Sidebar -->
+      <Border Grid.Column="0" Background="{x:Static th:PT+C.SidebarBrush}"
+              BorderBrush="{x:Static th:PT+C.HairlineBrush}"
+              BorderThickness="{x:Static th:PT+T.RightHairline}">
+        <Grid>
+          <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+          </Grid.RowDefinitions>
+
+          <!-- Search. -->
+          <Border Grid.Row="0" Margin="{x:Static th:PT+T.SidebarPad}"
+                  Background="{x:Static th:PT+C.RaisedBrush}"
+                  BorderBrush="{x:Static th:PT+C.Border2Brush}"
+                  BorderThickness="{x:Static th:PT+T.Hairline}"
+                  CornerRadius="{x:Static th:PT+R.Field}">
+            <Grid>
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+              </Grid.ColumnDefinitions>
+              <TextBlock Grid.Column="0" FontFamily="{x:Static th:PT+F.Glyph}" Text="&#xE721;"
+                         FontSize="{x:Static th:PT+F.MonoTiny}"
+                         Foreground="{x:Static th:PT+C.Text4Brush}"
+                         VerticalAlignment="Center" Margin="9,0,0,0" />
+              <Grid Grid.Column="1">
+                <TextBox x:Name="SearchBox" Background="Transparent" BorderThickness="0"
+                         Padding="{x:Static th:PT+T.SearchField}"
+                         Text="{Binding Search, UpdateSourceTrigger=PropertyChanged, Delay=150}" />
+                <TextBlock Style="{StaticResource PT.Text.Caption}" IsHitTestVisible="False"
+                           Foreground="{x:Static th:PT+C.Text4Brush}"
+                           Margin="{x:Static th:PT+T.SearchField}" VerticalAlignment="Center"
+                           Text="Search transcripts"
+                           Visibility="{Binding Search, Converter={StaticResource VisibleWhenAbsent}}" />
+              </Grid>
+            </Grid>
+          </Border>
+
+          <!-- The session list. Selection is a filled row with a ring, never a
+               coloured edge bar (rule 4). -->
+          <ScrollViewer Grid.Row="1" Padding="0,0,0,8">
+            <ItemsControl ItemsSource="{Binding Groups}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate DataType="{x:Type vm:SessionGroupViewModel}">
+                  <StackPanel Margin="0,0,0,10">
+                    <c:TrackedText Text="{Binding Title}" Uppercase="True"
+                                   Margin="{x:Static th:PT+T.SidebarRowContent}" />
+                    <ItemsControl ItemsSource="{Binding Sessions}"
+                                  ItemTemplate="{StaticResource SessionRow}">
+                      <ItemsControl.ItemContainerStyle>
+                        <Style TargetType="ContentPresenter">
+                          <Setter Property="Margin" Value="{x:Static th:PT+T.SidebarRow}" />
+                        </Style>
+                      </ItemsControl.ItemContainerStyle>
+                    </ItemsControl>
+                  </StackPanel>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </ScrollViewer>
+
+          <!-- Footer: where the recordings live. -->
+          <Border Grid.Row="2" BorderBrush="{x:Static th:PT+C.HairlineBrush}"
+                  BorderThickness="{x:Static th:PT+T.TopHairline}">
+            <Button Style="{StaticResource PT.Button.Text}"
+                    Command="{Binding OpenRecordingsFolderCommand}"
+                    HorizontalContentAlignment="Left"
+                    ToolTip="Open the recordings folder">
+              <StackPanel Orientation="Horizontal" Margin="{x:Static th:PT+T.SidebarHorizontal}">
+                <TextBlock FontFamily="{x:Static th:PT+F.Glyph}" Text="&#xE8B7;"
+                           FontSize="{x:Static th:PT+F.MonoTiny}"
+                           Foreground="{x:Static th:PT+C.GlyphDimBrush}"
+                           VerticalAlignment="Center" />
+                <TextBlock Style="{StaticResource PT.Text.Mono}" Margin="7,0,0,0"
+                           Text="{Binding RecordingsRoot}" TextTrimming="CharacterEllipsis"
+                           VerticalAlignment="Center" />
+              </StackPanel>
+            </Button>
+          </Border>
+        </Grid>
+      </Border>
+
+      <!-- Detail -->
+      <ContentControl Grid.Column="1" Content="{Binding Detail}" x:Name="DetailHost">
+        <ContentControl.Style>
+          <Style TargetType="ContentControl">
+            <!-- Nothing selected, which is a first run or an emptied folder. -->
+            <Setter Property="ContentTemplate">
+              <Setter.Value>
+                <DataTemplate>
+                  <StackPanel VerticalAlignment="Center" Margin="40">
+                    <TextBlock FontFamily="{x:Static th:PT+F.Glyph}" Text="&#xE720;"
+                               FontSize="{x:Static th:PT+F.Placeholder}"
+                               Foreground="{x:Static th:PT+C.GlyphDimBrush}"
+                               HorizontalAlignment="Center" />
+                    <TextBlock Style="{StaticResource PT.Text.Placeholder}" Margin="0,14,0,0"
+                               Text="No recordings yet" />
+                    <TextBlock Style="{StaticResource PT.Text.Caption}" Margin="0,6,0,0"
+                               TextAlignment="Center" TextWrapping="Wrap"
+                               Foreground="{x:Static th:PT+C.Text4Brush}"
+                               Text="Click the record control in the titlebar, or the tray icon, to record a meeting." />
+                  </StackPanel>
+                </DataTemplate>
+              </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+              <DataTrigger Binding="{Binding Detail.State}" Value="Transcript">
+                <Setter Property="ContentTemplate" Value="{StaticResource TranscriptDetail}" />
+              </DataTrigger>
+              <DataTrigger Binding="{Binding Detail.State}" Value="Recording">
+                <Setter Property="ContentTemplate" Value="{StaticResource RecordingDetail}" />
+              </DataTrigger>
+              <DataTrigger Binding="{Binding Detail.State}" Value="Pending">
+                <Setter Property="ContentTemplate" Value="{StaticResource PlaceholderDetail}" />
+              </DataTrigger>
+              <DataTrigger Binding="{Binding Detail.State}" Value="Empty">
+                <Setter Property="ContentTemplate" Value="{StaticResource PlaceholderDetail}" />
+              </DataTrigger>
+              <DataTrigger Binding="{Binding Detail.State}" Value="Broken">
+                <Setter Property="ContentTemplate" Value="{StaticResource PlaceholderDetail}" />
+              </DataTrigger>
+            </Style.Triggers>
+          </Style>
+        </ContentControl.Style>
+      </ContentControl>
+    </Grid>
+
+    <!-- The destination picker. Drawn rather than a system menu, which is the one
+         menu on macOS that is also drawn: it carries sections, use counts, and the
+         app's own ground, none of which a system menu will render. -->
+    <Popup x:Name="DestinationPopup" PlacementTarget="{Binding ElementName=DestinationChevron}"
+           Placement="Bottom" StaysOpen="False" AllowsTransparency="True"
+           HorizontalOffset="{x:Static th:PT+M.MenuTrailing}">
+      <Border Width="{x:Static th:PT+M.MenuWidth}"
+              Background="{x:Static th:PT+C.RaisedBrush}"
+              BorderBrush="{x:Static th:PT+C.MenuEdgeBrush}"
+              BorderThickness="{x:Static th:PT+T.Hairline}"
+              CornerRadius="{x:Static th:PT+R.Menu}"
+              Padding="{x:Static th:PT+T.MenuPad}">
+        <Border.Effect>
+          <DropShadowEffect BlurRadius="{x:Static th:PT+M.MenuShadowRadius}"
+                            ShadowDepth="{x:Static th:PT+M.MenuShadowY}"
+                            Direction="270" Opacity="0.6" Color="Black" />
+        </Border.Effect>
+        <ItemsControl ItemsSource="{Binding DestinationGroups}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate DataType="{x:Type vm:DestinationGroupViewModel}">
+              <StackPanel>
+                <c:TrackedText Text="{Binding Title}" Uppercase="True"
+                               Margin="{x:Static th:PT+T.MenuRow}" />
+                <ItemsControl ItemsSource="{Binding Destinations}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate DataType="{x:Type vm:DestinationViewModel}">
+                      <Border x:Name="Row" Background="Transparent"
+                              CornerRadius="{x:Static th:PT+R.MenuRow}"
+                              Padding="{x:Static th:PT+T.MenuRow}">
+                        <Border.InputBindings>
+                          <MouseBinding MouseAction="LeftClick"
+                                        Command="{Binding DataContext.ChooseDestinationCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                        CommandParameter="{Binding}" />
+                        </Border.InputBindings>
+                        <Grid>
+                          <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                          </Grid.ColumnDefinitions>
+                          <TextBlock Style="{StaticResource PT.Text}" Text="{Binding Label}"
+                                     FontSize="{x:Static th:PT+F.MenuItem}"
+                                     Foreground="{x:Static th:PT+C.Text2Brush}"
+                                     TextTrimming="CharacterEllipsis" />
+                          <!-- A site that keeps a copy off the machine says so here,
+                               before it is chosen rather than after. -->
+                          <TextBlock Grid.Column="1" Style="{StaticResource PT.Text.Caption}"
+                                     Text="Uploads a copy" Margin="8,0,0,0"
+                                     Foreground="{x:Static th:PT+C.SignalWarnBrush}"
+                                     Visibility="{Binding UploadsToCloud, Converter={StaticResource Visible}}" />
+                        </Grid>
+                      </Border>
+                      <DataTemplate.Triggers>
+                        <Trigger SourceName="Row" Property="IsMouseOver" Value="True">
+                          <Setter TargetName="Row" Property="Background"
+                                  Value="{x:Static th:PT+C.MenuSelectFillBrush}" />
+                        </Trigger>
+                      </DataTemplate.Triggers>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </StackPanel>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </Border>
+    </Popup>
+  </Grid>
+</Window>

@@ -28,7 +28,13 @@ public sealed class ModelStore(string directory)
     public IReadOnlyList<string> Missing() =>
         new[] { Encoder, Decoder, Joiner, Tokens }.Where(path => !File.Exists(path)).ToList();
 
-    public async Task EnsureAsync(CancellationToken cancellationToken = default)
+    /// <param name="progress">
+    /// Reports the download, the hash check, and the extract. All three take
+    /// minutes on a first run, so a caller with a user waiting needs each one.
+    /// </param>
+    public async Task EnsureAsync(
+        IProgress<ModelInstallProgress>? progress = null,
+        CancellationToken cancellationToken = default)
     {
         if (Missing().Count == 0 && await InstalledFilesAreValidAsync(cancellationToken)) return;
         if (System.IO.Directory.Exists(Directory))
@@ -39,7 +45,11 @@ public sealed class ModelStore(string directory)
             Source,
             ArchiveBytes,
             ArchiveSha256,
-            cancellationToken);
+            cancellationToken,
+            progress);
+        // The archive is bz2, which decompresses slowly and reports no byte
+        // counts. Without a phase here the bar sits full and nothing happens.
+        progress?.Report(new ModelInstallProgress(ModelInstallPhase.Extracting, 0, 0));
         var staging = Path.Combine(ModelRoot, ".extract-" + Guid.NewGuid().ToString("N"));
         System.IO.Directory.CreateDirectory(staging);
         try
@@ -144,6 +154,9 @@ public sealed class WhisperModelStore(string directory)
     public string Path => System.IO.Path.Combine(Directory, FileName);
     public static WhisperModelStore Default => new(System.IO.Path.Combine(ModelStore.ModelRoot, ModelName));
 
-    public Task<string> EnsureAsync(CancellationToken cancellationToken = default) =>
-        VerifiedDownloader.EnsureFileAsync(Directory, FileName, Source, Bytes, Sha256, cancellationToken);
+    public Task<string> EnsureAsync(
+        IProgress<ModelInstallProgress>? progress = null,
+        CancellationToken cancellationToken = default) =>
+        VerifiedDownloader.EnsureFileAsync(
+            Directory, FileName, Source, Bytes, Sha256, cancellationToken, progress);
 }

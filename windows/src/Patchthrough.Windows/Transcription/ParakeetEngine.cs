@@ -26,7 +26,7 @@ public sealed class ParakeetEngine(ModelStore? models = null, int threads = 0) :
     public async Task PrepareAsync(CancellationToken cancellationToken = default)
     {
         if (_recognizer is not null) return;
-        await _models.EnsureAsync(cancellationToken);
+        await _models.EnsureAsync(cancellationToken: cancellationToken);
 
         var config = new OfflineRecognizerConfig();
         config.FeatConfig.SampleRate = SampleRate;

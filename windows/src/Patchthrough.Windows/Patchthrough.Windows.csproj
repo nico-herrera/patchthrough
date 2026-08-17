@@ -37,15 +37,37 @@
     <ProjectReference Include="..\Patchthrough.Core\Patchthrough.Core.csproj" />
   </ItemGroup>
 
-  <!-- Whisper.net.Runtime.Vulkan guards its Windows natives with a
-       TargetFramework condition but adds its Linux natives unconditionally, so
-       a win-x64 publish carried 61 MB of ELF shared objects that Windows can
-       never load. Drop them once the package targets have run. This project is
-       Windows-only, so no .so file here is ever wanted.
-       Remove this when the package conditions its Linux item group. -->
-  <Target Name="DropLinuxVulkanRuntimes" BeforeTargets="AssignTargetPaths">
+  <!-- The Whisper.net runtime packages add native libraries for platforms this
+       build cannot load, without conditioning them on the target runtime. A
+       win-x64 publish carried 61 MB of Linux ELF objects, and 1.6 MB of 32-bit
+       plus 1.6 MB of ARM64 Windows DLLs. None of them is reachable: a process
+       loads the architecture it is, and on ARM64 Windows this runs as emulated
+       x64, so even the ARM64 set stays dead.
+
+       Two rules, both applied before the package's own target paths are assigned.
+
+       The first drops anything that is not a Windows binary at all.
+
+       The second drops a native whose runtime identifier is not this build's. It
+       is written as "names an architecture, but not mine" rather than as a list
+       of architectures to exclude, so a future arm64 build of Patchthrough keeps
+       its own natives and drops the x64 ones with no edit here. It matches on the
+       `win-` token rather than on a path, because the packages write the
+       separator differently depending on the host.
+
+       `runtimes/vulkan/win-x64` survives: it carries the build's own identifier,
+       just one directory deeper.
+
+       verify-release.ps1 asserts the result, so a package update cannot put any
+       of this back silently. Remove these rules when the packages condition their
+       own item groups. -->
+  <Target Name="DropUnloadableNativeLibraries" BeforeTargets="AssignTargetPaths">
     <ItemGroup>
-      <None Remove="@(None)" Condition="'%(None.Extension)' == '.so'" />
+      <None Remove="@(None)"
+            Condition="'%(None.Extension)' == '.so' or '%(None.Extension)' == '.dylib'" />
+      <None Remove="@(None)"
+            Condition="$([System.String]::Copy('%(None.TargetPath)').Contains('win-'))
+                       and !$([System.String]::Copy('%(None.TargetPath)').Contains('$(RuntimeIdentifier)'))" />
     </ItemGroup>
   </Target>
 
