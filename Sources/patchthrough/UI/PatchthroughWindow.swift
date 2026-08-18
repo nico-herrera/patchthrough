@@ -560,6 +560,8 @@ struct PatchthroughRootView: View {
     @FocusState private var noteFocused: Bool
     @State private var recordHovered = false
     @State private var showDestinationMenu = false
+    /// The one update message the user has dismissed this session.
+    @State private var dismissedUpdateMessage: String?
     /// The hover/keyboard highlight in the destination menu. It persists when
     /// the pointer leaves a row: falling back to the default highlight made
     /// the selection bounce on every gap the pointer crossed.
@@ -571,6 +573,7 @@ struct PatchthroughRootView: View {
             VStack(spacing: 0) {
                 titleBar
                 Rectangle().fill(PT.C.hairline).frame(height: 1)
+                updateBanner
                 // 11a is a fixed `252px 1fr` grid, not a collapsible split view.
                 // NavigationSplitView insisted on a collapse control (which drags
                 // a second titlebar in with it) and would not honour a pinned
@@ -617,6 +620,67 @@ struct PatchthroughRootView: View {
         .onExitCommand { closeDestinationMenu() }
         .onChange(of: store.showSettings) { _, isShowing in
             if isShowing { closeDestinationMenu() }
+        }
+    }
+
+    // MARK: Update strip
+    //
+    // 11a has no mock for an available update, so per DESIGN_RULES §12 this is
+    // the minimum that follows the rules rather than a new visual language: a
+    // raised ground for emphasis instead of a colour (§2, §3), neutral text,
+    // and the chip shape the settings sheet already uses (§11). Red stays
+    // reserved for recording and destruction, so nothing here is red.
+    //
+    // It sits under the titlebar and spans both panes, because an update is a
+    // property of the app rather than of the selected session. Dismissing it
+    // hides that message only: a different state, or a later version, shows a
+    // new strip. The menu bar keeps its own item either way.
+    @ViewBuilder
+    private var updateBanner: some View {
+        if let banner = UpdateBannerDisplay(state: store.updateState),
+           banner.message != dismissedUpdateMessage {
+            HStack(spacing: 10) {
+                Image(systemName: "arrow.down.circle")
+                    .font(PT.F.iconSmall)
+                    .foregroundStyle(PT.C.text2)
+                Text(banner.message)
+                    .font(PT.F.sessionLine)
+                    .foregroundStyle(PT.C.text)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                Spacer(minLength: 12)
+                if let action = banner.actionTitle {
+                    Button { store.onUpdateAction?() } label: {
+                        Text(action)
+                            .font(PT.F.control)
+                            .foregroundStyle(PT.C.text2)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .background(PT.C.chip, in: RoundedRectangle(cornerRadius: PT.M.fieldRadius))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: PT.M.fieldRadius)
+                                    .strokeBorder(PT.C.border, lineWidth: 1)
+                            )
+                    }
+                    .buttonStyle(.plain)
+                }
+                Button { dismissedUpdateMessage = banner.message } label: {
+                    Image(systemName: "xmark")
+                        .font(PT.F.iconSmall)
+                        .foregroundStyle(PT.C.text4)
+                        .frame(width: 20, height: 20)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Dismiss")
+            }
+            // Aligned to the sidebar's own inset, not the titlebar's: that one
+            // is 88pt of traffic-light clearance, and below the titlebar there
+            // are no traffic lights, so it lines up with nothing.
+            .padding(.horizontal, PT.M.sidebarPad)
+            .padding(.vertical, 8)
+            .background(PT.C.raised)
+            Rectangle().fill(PT.C.hairline).frame(height: 1)
         }
     }
 
@@ -2310,4 +2374,44 @@ struct SettingsUpdateDisplay {
         format.timeStyle = .short
         return format
     }()
+}
+
+/// The update strip's text. Split out of the view for the same reason as
+/// `SettingsUpdateDisplay`: these strings carry design rules that a later edit
+/// breaks quietly. Nil means the strip stays hidden, which is the answer for
+/// every state the user cannot act on or does not need told about.
+@MainActor
+struct UpdateBannerDisplay {
+    let message: String
+    let actionTitle: String?
+
+    init?(state: UpdateController.State) {
+        switch state {
+        case .idle, .checking:
+            return nil
+        case .available(let version):
+            message = "Version \(version) is ready to install"
+            actionTitle = "Install"
+        case .downloading:
+            message = "Downloading the update…"
+            actionTitle = nil
+        case .verifying:
+            message = "Checking the download's signature…"
+            actionTitle = nil
+        case .installing:
+            message = "Installing the update. Patchthrough will restart"
+            actionTitle = nil
+        case .waitingForRecordingEnd(let version):
+            message = "Version \(version) installs after this recording"
+            actionTitle = nil
+        case .manualInstall(let version):
+            message = "Version \(version) is downloaded. Drag Patchthrough to Applications to finish"
+            actionTitle = "Show in Finder"
+        case .failed(let reason):
+            // Shown rather than hidden: a strip that vanished after a click
+            // would leave the user guessing whether anything happened.
+            message = "\(reason). The current version keeps running"
+            actionTitle = "Try again"
+        }
+    }
 }
