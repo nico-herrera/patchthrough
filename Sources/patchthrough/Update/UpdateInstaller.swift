@@ -94,12 +94,22 @@ enum UpdateInstaller {
         task.waitUntilExit()
     }
 
-    /// A drag-installed /Applications copy may be admin-owned; the swap
-    /// needs to rename both the bundle and a sibling inside its parent.
+    /// Whether the swap can happen, which is a question about the *parent*
+    /// directory and not about the bundle.
+    ///
+    /// `swap` never writes inside the bundle. It creates a sibling and renames
+    /// twice, and rename permission comes from the directory holding the
+    /// entries. Asking whether the bundle itself is writable gets the wrong
+    /// answer for every real install: macOS tags an app that arrived from a
+    /// download with `com.apple.provenance`, App Management then refuses writes
+    /// into it, and `access(W_OK)` reports false even though the owner's write
+    /// bit is set. Checking the bundle sent every dragged install down the
+    /// manual path, so nothing ever updated itself.
+    ///
+    /// An admin-owned /Applications still answers false here, which is right:
+    /// that is the case the manual path exists for.
     static func destinationIsWritable(_ dest: URL) -> Bool {
-        let fm = FileManager.default
-        return fm.isWritableFile(atPath: dest.path)
-            && fm.isWritableFile(atPath: dest.deletingLastPathComponent().path)
+        FileManager.default.isWritableFile(atPath: dest.deletingLastPathComponent().path)
     }
 
     /// Copies the verified app to a hidden staged sibling of the

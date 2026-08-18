@@ -374,3 +374,36 @@ private let feedFixture = """
         #expect(!shown.message.contains("\u{2014}"))
     }
 }
+
+// MARK: - Whether the swap is allowed
+
+/// The swap renames the bundle inside its parent, so permission is a property
+/// of the parent. This shipped wrong: it asked whether the bundle itself was
+/// writable, which is false for every app that arrived from a download,
+/// because macOS tags those with `com.apple.provenance` and App Management
+/// refuses writes into them. Every dragged install took the manual path and
+/// nothing ever updated itself. Locally built test fixtures carry no
+/// provenance, which is exactly why no test caught it.
+@Test func theSwapAsksAboutTheParentNotTheBundle() throws {
+    let fm = FileManager.default
+    let parent = fm.temporaryDirectory
+        .appendingPathComponent("writable-\(UUID().uuidString)", isDirectory: true)
+    let bundle = parent.appendingPathComponent("patchthrough.app")
+    try fm.createDirectory(at: bundle, withIntermediateDirectories: true)
+    defer {
+        try? fm.setAttributes([.posixPermissions: 0o755], ofItemAtPath: bundle.path)
+        try? fm.setAttributes([.posixPermissions: 0o755], ofItemAtPath: parent.path)
+        try? fm.removeItem(at: parent)
+    }
+
+    #expect(UpdateInstaller.destinationIsWritable(bundle))
+
+    // A bundle nobody may write into, inside a parent we may: the shape of a
+    // real install. The swap works here, so this must stay true.
+    try fm.setAttributes([.posixPermissions: 0o555], ofItemAtPath: bundle.path)
+    #expect(UpdateInstaller.destinationIsWritable(bundle))
+
+    // A parent nobody may write into is the case the manual path exists for.
+    try fm.setAttributes([.posixPermissions: 0o555], ofItemAtPath: parent.path)
+    #expect(!UpdateInstaller.destinationIsWritable(bundle))
+}
