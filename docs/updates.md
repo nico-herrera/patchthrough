@@ -71,6 +71,38 @@ A destination the user cannot write (a drag-installed `/Applications` owned by a
 admin) never triggers privilege escalation. The app opens the verified image and
 asks for a drag instead.
 
+## How it schedules, and why it looks odd
+
+`run` enters `NSApplication.run()` from inside the async main task and never
+returns, so the main dispatch queue is occupied for the life of the process.
+Anything queued behind it never runs. A MainActor `Task`, a
+`DispatchQueue.main.async`, and an `await MainActor.run` from a background task
+all hang forever. This was measured in a real session, not assumed: a Timer
+fired and `Thread.isMainThread` was true, while the queue-based hops stayed
+silent.
+
+So the updater schedules with `Timer` on the run loop, does its waiting,
+network, and verification work in detached tasks, and returns to the main actor
+through `RunLoop.main.perform`, which is run-loop based rather than queue based.
+AppController's elapsed ticker copes the same way, with `MainActor.assumeIsolated`
+inside a Timer callback.
+
+**If you add async work here, do not reach for `Task {}` or
+`DispatchQueue.main.async`.** They compile, they look right, and they never
+execute. The first version of this feature scheduled that way and checked for
+updates exactly never, which no test caught: the CLI has no blocked main queue,
+so `patchthrough update` worked perfectly the whole time.
+`theUpdaterNeverSchedulesOnTheBlockedMainQueue` in the tests guards the rule.
+
+The same blockage breaks two things outside the updater: the `Task { @MainActor }`
+that installs the transcription status handler and calls `resumePending` never
+runs, so the menu bar never shows transcription progress and an interrupted
+transcription is never resumed at launch. The Fusion92 fork hit this first and
+fixed the cause, by replacing the synthesised `AsyncParsableCommand` entry point
+with a `main()` that runs `Run` straight off the main thread and leaves the main
+queue free. Porting that fix here would repair both, and would let this file
+drop its workaround.
+
 ## When it checks
 
 About every six hours, with a 30-minute timer tolerance and up to 15 minutes of

@@ -569,7 +569,11 @@ final class AppController: NSObject, NSApplicationDelegate {
         menuBar.onHandoff = { [weak self] agent in self?.handOff(to: agent) }
         menuBar.onUpdate = { [weak self] in self?.updater.updateClicked() }
         updater.isRecording = { [weak self] in self?.session != nil }
-        updater.onStateChange = { [weak self] state in self?.menuBar.applyUpdate(state) }
+        updater.onStateChange = { [weak self] state in
+            self?.menuBar.applyUpdate(state)
+            self?.store.updateState = state
+        }
+        store.onUpdateAction = { [weak self] in self?.updater.updateClicked() }
         store.onUpdateCheckChanged = { [weak self] enabled in
             self?.applyUpdateSchedule(enabled: enabled)
         }

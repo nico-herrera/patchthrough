@@ -246,3 +246,94 @@ private let feedFixture = """
         try UpdateVerifier.verifyCodeSignature(app: mounted.app, team: "WRONGTEAM1")
     }
 }
+
+// MARK: - What Settings shows
+
+/// Settings is the only place a user can read their version and reach a
+/// check, so every state has to produce a line, and the busy ones must not
+/// offer a button that does nothing.
+@Test @MainActor func settingsDescribesEveryUpdateState() throws {
+    let version = try #require(SemVer("1.7.0"))
+    func shown(_ state: UpdateController.State) -> SettingsUpdateDisplay {
+        SettingsUpdateDisplay(
+            state: state, releaseVersion: "1.6.0", hasFeed: true, lastChecked: nil
+        )
+    }
+    let cases: [(UpdateController.State, String, String?)] = [
+        (.idle, "Not checked yet", "Check now"),
+        (.checking, "Checking for updates…", nil),
+        (.available(version), "Version 1.7.0 is ready to install", "Install 1.7.0"),
+        (.downloading, "Downloading the update…", nil),
+        (.verifying, "Checking the download's signature…", nil),
+        (.installing, "Installing…", nil),
+        (.waitingForRecordingEnd(version), "Version 1.7.0 installs after this recording", nil),
+        (.manualInstall(version), "Version 1.7.0 is downloaded and waiting in Finder", "Show in Finder"),
+        (.failed("The download does not match the release checksum"),
+         "The download does not match the release checksum", "Check now"),
+    ]
+    for (state, line, action) in cases {
+        let display = shown(state)
+        #expect(display.statusLine == line)
+        #expect(display.actionTitle == action)
+        // Design rules: a capital first letter, and no em dash anywhere a
+        // user reads. Both are easy to break in a later edit.
+        #expect(display.statusLine.first?.isUppercase == true)
+        #expect(!display.statusLine.contains("\u{2014}"))
+    }
+    #expect(shown(.idle).versionTitle == "Version 1.6.0")
+}
+
+/// A build that cannot update says so and offers no button, rather than
+/// inviting a check that would report nothing.
+@Test @MainActor func settingsHidesTheButtonWhenNothingCanUpdate() {
+    let sourceBuild = SettingsUpdateDisplay(
+        state: .idle, releaseVersion: "development", hasFeed: true, lastChecked: nil
+    )
+    #expect(sourceBuild.versionTitle == "Source build")
+    #expect(sourceBuild.statusLine == "Updates do not apply to a build made from source")
+    #expect(sourceBuild.actionTitle == nil)
+
+    // The Fusion92 build until its feed exists.
+    let noFeed = SettingsUpdateDisplay(
+        state: .idle, releaseVersion: "1.6.0", hasFeed: false, lastChecked: nil
+    )
+    #expect(noFeed.statusLine == "This build has no update feed")
+    #expect(noFeed.actionTitle == nil)
+}
+
+// MARK: - How the updater is allowed to schedule
+
+/// Upstream enters `NSApplication.run()` from inside a work item on the main
+/// queue, which blocks that queue for the life of the process: a MainActor
+/// `Task` or a `DispatchQueue.main.async` enqueued afterwards never executes.
+/// The Fusion92 fork fixed the cause in its entry point, but this file is
+/// shared, so it keeps the shape that works in both.
+///
+/// This is a source check rather than a behaviour test because the failure is
+/// invisible: the wrong code compiles, reads correctly, and silently does
+/// nothing. The first version of the updater scheduled that way and checked
+/// for updates exactly never, while every unit test and the CLI passed,
+/// because the CLI has no blocked queue.
+@Test func theUpdaterNeverSchedulesOnTheBlockedMainQueue() throws {
+    let controller = URL(fileURLWithPath: #filePath)
+        .deletingLastPathComponent()   // patchthroughTests
+        .deletingLastPathComponent()   // Tests
+        .deletingLastPathComponent()   // repo root
+        .appendingPathComponent("Sources/patchthrough/Update/UpdateController.swift")
+    let source = try String(contentsOf: controller, encoding: .utf8)
+    // Comments name these APIs on purpose, to warn the next reader off them,
+    // so only real code counts.
+    let code = source
+        .split(separator: "\n", omittingEmptySubsequences: false)
+        .filter { !$0.trimmingCharacters(in: .whitespaces).hasPrefix("//") }
+        .joined(separator: "\n")
+
+    #expect(!code.contains("DispatchQueue.main.async"))
+    #expect(!code.contains("MainActor.run("))
+    // `Task.detached` is the allowed form, so this looks for the bare one.
+    #expect(!code.contains("Task {"))
+    #expect(!code.contains("Task { @MainActor"))
+    // And the two mechanisms that do work must still be the ones in use.
+    #expect(code.contains("RunLoop.main.perform"))
+    #expect(code.contains("Task.detached"))
+}
