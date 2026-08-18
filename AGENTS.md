@@ -49,6 +49,14 @@ on-disk session format (`schemas/session-v1.md`):
     reintroduce `NSToolbar`, `NavigationSplitView`, or a sidebar `List`),
     `MenuBarController.swift` (AppKit status item), `Theme.swift` (design
     tokens), `HandoffAlert.swift`, `AppIcon.swift`.
+  - `Update/` — the in-app updater. `UpdateSource.swift` holds the feed repo,
+    the expected signing team, and whether Settings may turn checks off (the
+    Fusion92 fork replaces that one file). `UpdateFeed.swift` reads the GitHub
+    release feed, `UpdateVerifier.swift` is the trust boundary,
+    `UpdateInstaller.swift` swaps the bundle and restarts,
+    `UpdatePipeline.swift` orders those steps, `UpdateController.swift` owns
+    the schedule and the menu-bar state, `UpdateCommand.swift` is
+    `patchthrough update`.
   - `Handoff.swift` — agent/destination registry and handoff logic. **To add
     an agent or GUI target, add one entry here.**
   - `Config.swift` — reads `~/.config/patchthrough/config.json`.
@@ -112,7 +120,17 @@ swift build                                    # debug build of the app
 Preferences live in the `com.nicoherrera.patchthrough` defaults domain (the
 app is not sandboxed). Debug env vars (all off by default):
 `PATCHTHROUGH_DEBUG_WINDOW`, `PATCHTHROUGH_DEBUG_SETTINGS`,
-`PATCHTHROUGH_DEBUG_MENU`.
+`PATCHTHROUGH_DEBUG_MENU`, `PATCHTHROUGH_DEBUG_UPDATE` (checks for an update
+at once and traces the updater to stderr).
+
+A locally built bundle carries version `0.1.0`, so it treats the newest public
+release as an update and offers to replace itself. While you iterate, build
+with `PATCHTHROUGH_VERSION=99.0.0` or turn the checks off:
+`"updates": {"check": false}` in the config file.
+
+`tools/update-e2e.sh` exercises the whole update path against a local feed. It
+builds two signed bundles in a scratch directory and never touches
+`~/Applications`. See [docs/updates.md](docs/updates.md).
 
 The Parakeet models (~600 MB) download from HuggingFace on first
 transcription into `~/Library/Application Support/FluidAudio/Models`.

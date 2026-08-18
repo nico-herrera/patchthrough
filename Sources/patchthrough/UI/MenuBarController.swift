@@ -32,6 +32,7 @@ final class MenuBarController {
     private let patchNowItem: NSMenuItem
     private let handoffItem: NSMenuItem
     private let transcriptionLabel: NSMenuItem
+    private let updateItem: NSMenuItem
 
     private var recordingDot: NSView?
     private var isRecording = false
@@ -44,6 +45,7 @@ final class MenuBarController {
     var onOpenWindow: (() -> Void)?
     var onQuit: (() -> Void)?
     var onHandoff: ((String) -> Void)?
+    var onUpdate: (() -> Void)?
 
     init() {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
@@ -83,12 +85,18 @@ final class MenuBarController {
         let openFolder = NSMenuItem(title: "Recordings folder", action: #selector(openFolderClicked), keyEquivalent: "o")
         menu.addItem(openFolder)
 
+        // Hidden until a check finds something. Never Signal red: this is
+        // neither recording nor destruction.
+        updateItem = NSMenuItem(title: "", action: #selector(updateClicked), keyEquivalent: "")
+        updateItem.isHidden = true
+        menu.addItem(updateItem)
+
         menu.addItem(.separator())
 
         let quit = NSMenuItem(title: "Quit", action: #selector(quitClicked), keyEquivalent: "q")
         menu.addItem(quit)
 
-        for item in [toggleItem, patchNowItem, openWindow, openFolder, quit] {
+        for item in [toggleItem, patchNowItem, openWindow, openFolder, updateItem, quit] {
             item.target = self
         }
 
@@ -123,6 +131,45 @@ final class MenuBarController {
     func apply(_ newModel: HandoffMenuModel) {
         model = newModel
         render()
+    }
+
+    /// Renders the updater's state. The item stays hidden while there is
+    /// nothing to say, so a menu with no update pending looks unchanged.
+    func applyUpdate(_ state: UpdateController.State) {
+        switch state {
+        case .idle, .checking:
+            updateItem.isHidden = true
+            updateItem.isEnabled = false
+            updateItem.title = ""
+        case .available(let version):
+            updateItem.isHidden = false
+            updateItem.isEnabled = true
+            updateItem.title = "Update to \(version)"
+        case .downloading:
+            updateItem.isHidden = false
+            updateItem.isEnabled = false
+            updateItem.title = "Downloading update…"
+        case .verifying:
+            updateItem.isHidden = false
+            updateItem.isEnabled = false
+            updateItem.title = "Verifying update…"
+        case .installing:
+            updateItem.isHidden = false
+            updateItem.isEnabled = false
+            updateItem.title = "Installing update…"
+        case .waitingForRecordingEnd:
+            updateItem.isHidden = false
+            updateItem.isEnabled = false
+            updateItem.title = "Update installs after this recording"
+        case .manualInstall:
+            updateItem.isHidden = false
+            updateItem.isEnabled = true
+            updateItem.title = "Finish the update in Finder"
+        case .failed:
+            updateItem.isHidden = false
+            updateItem.isEnabled = true
+            updateItem.title = "Update failed. Try again"
+        }
     }
 
     private func render() {
@@ -282,6 +329,7 @@ final class MenuBarController {
     @objc private func openWindowClicked() { onOpenWindow?() }
     @objc private func openFolderClicked() { onOpenFolder?() }
     @objc private func quitClicked() { onQuit?() }
+    @objc private func updateClicked() { onUpdate?() }
     @objc private func patchNowClicked() {
         if let id = patchNowItem.representedObject as? String { onHandoff?(id) }
     }

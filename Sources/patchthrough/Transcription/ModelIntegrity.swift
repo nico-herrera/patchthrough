@@ -48,7 +48,8 @@ enum ModelIntegrity {
         }
     }
 
-    private static func sha256(_ url: URL) throws -> String {
+    // Internal, not private: UpdateVerifier reuses this as its streaming hash.
+    static func sha256(_ url: URL) throws -> String {
         let input = try FileHandle(forReadingFrom: url)
         defer { try? input.close() }
         var digest = SHA256()

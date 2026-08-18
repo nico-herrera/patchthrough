@@ -15,6 +15,15 @@ swift build                                    # debug
 `make-app.sh` also installs to `~/Applications`. A running copy keeps the image it
 launched with, so it has to be restarted before any of it is visible.
 
+**A locally built bundle is version `0.1.0`, which is older than every public
+release, so it treats the newest release as an update and offers to replace your
+build with it.** Build with `PATCHTHROUGH_VERSION=99.0.0` while you iterate, or put
+`"updates": {"check": false}` in the config file. `PATCHTHROUGH_DEBUG_UPDATE=1`
+checks at once and traces the updater to stderr. `tools/update-e2e.sh` drives the
+whole update path against a local feed without touching `~/Applications`. The
+mechanism, and what it verifies before replacing anything, is in
+[docs/updates.md](docs/updates.md).
+
 **How to restart depends on how the app was started, and only one of the two is a
 daemon.** If `patchthrough install` set up the LaunchAgent, use
 `launchctl kickstart -k gui/$(id -u)/com.nicoherrera.patchthrough`. If the app was
@@ -140,6 +149,11 @@ not a bug.
   `transcript.md` and the handoff's notes section both print it and must agree,
   or a note points at a line near the one it means.
 - `Handoff.swift` — stages a transcript into a repo and launches an agent.
+- `Update/` — the in-app updater. `UpdateSource.swift` is the one file the
+  Fusion92 fork replaces: feed repo, expected signing team, whether Settings may
+  turn checks off. `UpdateVerifier.swift` is the trust boundary, and nothing about
+  it is relaxable in a release build. Read
+  [docs/updates.md](docs/updates.md) before changing the swap or the restart.
 
 ## Conventions
 

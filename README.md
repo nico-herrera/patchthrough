@@ -89,6 +89,13 @@ needs no change to the CLI.
 open it, and drag Patchthrough into Applications. Patchthrough Settings has an option
 to launch the app at login.
 
+Patchthrough then updates itself. It asks GitHub for the newest release about twice a
+day, and the menu bar offers to install one when it finds it. Nothing installs without
+a click, and nothing installs during a recording. Before it replaces anything, the app
+checks that the download carries the same Developer ID signature, the same team, and
+the same bundle identifier as the copy you are running, and that Apple notarized it.
+Settings turns the checks off. See [docs/updates.md](docs/updates.md).
+
 Apple notarizes each release, and each release is signed with Developer ID and
 published with a SHA-256 checksum. Releases therefore open on a normal double-click.
 This open-source project ships directly through GitHub instead of the Mac App Store.
@@ -307,6 +314,9 @@ release independently:
 - `./packaging/make-dist.sh <version>` builds the signed disk image.
   `./packaging/notarize.sh` then notarizes and staples the disk image before you attach
   it to a GitHub release.
+- **The release tag must match the version exactly.** `make-dist.sh 1.7.0` needs tag
+  `v1.7.0`. The installed app compares the two and refuses an update when they disagree.
+  See [docs/updates.md](docs/updates.md).
 - `windows\packaging\build-release.ps1 -Version <version>` builds the self-contained
   Windows x64 ZIP and per-user installer. CI exercises the full install and uninstall
   flow, but its artifacts are unsigned previews. Pass `-CertificateThumbprint` for a

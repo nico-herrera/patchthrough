@@ -6,7 +6,9 @@ import UserNotifications
 
 @main
 struct Patchthrough: AsyncParsableCommand {
-    private static var releaseVersion: String {
+    // Internal, not private: the update subcommand compares this against
+    // the release feed.
+    static var releaseVersion: String {
         let key = "CFBundleShortVersionString"
         if let version = Bundle.main.object(forInfoDictionaryKey: key) as? String {
             return version
@@ -34,7 +36,7 @@ struct Patchthrough: AsyncParsableCommand {
         version: releaseVersion,
         subcommands: [
             Run.self, Hand.self, Transcripts.self, Doctor.self,
-            Benchmark.self, CorpusBenchmark.self, Install.self,
+            Benchmark.self, CorpusBenchmark.self, Install.self, Update.self,
         ],
         defaultSubcommand: Run.self
     )
@@ -545,6 +547,7 @@ final class AppController: NSObject, NSApplicationDelegate {
     private let root: URL
     private let menuBar = MenuBarController()
     private let transcription = TranscriptionCoordinator()
+    private let updater = UpdateController()
     private var session: RecordingSession?
     private var ticker: Timer?
     private let store: SessionStore
@@ -564,6 +567,16 @@ final class AppController: NSObject, NSApplicationDelegate {
         menuBar.onOpenWindow = { [weak self] in self?.openWindow() }
         menuBar.onQuit = { [weak self] in self?.shutdown() }
         menuBar.onHandoff = { [weak self] agent in self?.handOff(to: agent) }
+        menuBar.onUpdate = { [weak self] in self?.updater.updateClicked() }
+        updater.isRecording = { [weak self] in self?.session != nil }
+        updater.onStateChange = { [weak self] state in
+            self?.menuBar.applyUpdate(state)
+            self?.store.updateState = state
+        }
+        store.onUpdateAction = { [weak self] in self?.updater.updateClicked() }
+        store.onUpdateCheckChanged = { [weak self] enabled in
+            self?.applyUpdateSchedule(enabled: enabled)
+        }
         CFNotificationCenterAddObserver(
             CFNotificationCenterGetDarwinNotifyCenter(),
             Unmanaged.passUnretained(self).toOpaque(),
@@ -612,6 +625,25 @@ final class AppController: NSObject, NSApplicationDelegate {
             let center = UNUserNotificationCenter.current()
             center.delegate = self
             center.requestAuthorization(options: [.alert]) { _, _ in }
+        }
+
+    }
+
+    /// The updater polls the network and posts notifications, so it starts
+    /// here rather than in `init`: by this point the run loop is pumping.
+    /// Only a bundled build can replace itself, because a source build has
+    /// no release version to compare and no bundle to swap.
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        guard runsFromAppBundle else { return }
+        applyUpdateSchedule(enabled: Config.updateCheckEnabled())
+    }
+
+    /// Starts or stops the update schedule when the setting changes.
+    private func applyUpdateSchedule(enabled: Bool) {
+        if enabled {
+            updater.start()
+        } else {
+            updater.stop()
         }
     }
 
@@ -892,6 +924,10 @@ final class AppController: NSObject, NSApplicationDelegate {
 
         let dir = session.dir
         Task { [transcription] in await transcription.enqueue(dir) }
+
+        // An update the user asked for during the recording, or a check the
+        // timer skipped, runs now.
+        updater.recordingDidStop()
     }
 
     private func showTranscription(_ status: TranscriptionCoordinator.Status) {
@@ -932,16 +968,21 @@ final class AppController: NSObject, NSApplicationDelegate {
 }
 
 extension AppController: UNUserNotificationCenterDelegate {
-    /// A click on any Patchthrough banner opens the window. Every
-    /// notification the app posts ("transcript ready", the failure cases)
-    /// resolves there.
+    /// A click on a Patchthrough banner opens the window. Update banners
+    /// are the exception: they resolve in the updater, not the window, so
+    /// they carry an `update.` identifier and route there.
     nonisolated func userNotificationCenter(
         _ center: UNUserNotificationCenter,
         didReceive response: UNNotificationResponse,
         withCompletionHandler completionHandler: @escaping () -> Void
     ) {
+        let identifier = response.notification.request.identifier
         Task { @MainActor in
-            self.openWindow()
+            if identifier.hasPrefix("update.") {
+                self.updater.updateClicked()
+            } else {
+                self.openWindow()
+            }
         }
         completionHandler()
     }

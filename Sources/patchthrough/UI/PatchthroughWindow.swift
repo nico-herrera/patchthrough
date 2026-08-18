@@ -124,12 +124,23 @@ final class SessionStore: ObservableObject {
     @Published var search = ""
     @Published var showSettings = false
     @Published private(set) var lastDestinationID: String?
+    /// Mirrors the updater so Settings can show what it is doing. The menu bar
+    /// reads the same state through MenuBarController.applyUpdate.
+    @Published var updateState: UpdateController.State = .idle
     @Published var repoPath: String {
         didSet { UserDefaults.standard.set(repoPath, forKey: "handoff.repo") }
     }
 
     let root: URL
     var onToggleRecording: (() -> Void)?
+    /// Saved Settings changed the update-check setting. The controller owns
+    /// the schedule, so it starts or stops it here rather than at the next
+    /// launch.
+    var onUpdateCheckChanged: ((Bool) -> Void)?
+    /// The Settings button. One action for every state, because the updater
+    /// already decides what a click means: check when idle, install when an
+    /// update is waiting, reopen the image when it is a manual install.
+    var onUpdateAction: (() -> Void)?
 
     init(root: URL) {
         self.root = root
@@ -1493,6 +1504,7 @@ struct SettingsView: View {
     @State private var voiceProcessing = false
     @State private var autoPaste = false
     @State private var launchAtLogin = false
+    @State private var updateCheck = true
     @State private var onStop = ""
     @State private var openWindowOnRecord = true
     @State private var terminalID = TerminalApp.known[0].id
@@ -1647,6 +1659,38 @@ struct SettingsView: View {
                     well(text: $onStop, placeholder: "my-hook")
                         .focused($focused, equals: .hook)
                     caption("Runs with the session folder as its only argument. Empty for none.")
+                }
+
+                section("Updates") {
+                    card {
+                        HStack(spacing: 12) {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(updateVersionTitle)
+                                    .font(PT.F.settingRow).foregroundStyle(PT.C.text)
+                                Text(updateStatusLine)
+                                    .font(PT.F.caption).foregroundStyle(PT.C.text4)
+                            }
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            if let action = updateActionTitle {
+                                chip(action, hPad: 12) { store.onUpdateAction?() }
+                            }
+                        }
+                        .padding(.horizontal, 13)
+                        .padding(.vertical, 11)
+                    }
+                    if UpdateSource.allowsDisabling {
+                        card {
+                            toggleRow("Check for updates automatically",
+                                      subtitle: "Asks GitHub for the newest release about twice a day",
+                                      isOn: $updateCheck)
+                        }
+                        caption("Nothing installs without a click, and never during a recording.")
+                    } else {
+                        caption("""
+                        Updates come from the Fusion92 release feed and are always on for \
+                        this build. Nothing installs during a recording.
+                        """)
+                    }
                 }
 
                 if let error {
@@ -1919,6 +1963,7 @@ struct SettingsView: View {
         voiceProcessing = Config.micVoiceProcessing()
         autoPaste = Config.autoPaste()
         launchAtLogin = LaunchAtLogin.isEnabled
+        updateCheck = Config.updateCheckEnabled()
         onStop = Config.onStop() ?? ""
         openWindowOnRecord = Config.notesOpenWindowOnRecord()
         terminalID = TerminalApp.current().id
@@ -2006,9 +2051,15 @@ struct SettingsView: View {
                 // holding deliberate overrides only.
                 "terminal": terminalID == TerminalApp.known[0].id ? nil : terminalID,
                 "custom_destinations": destinations.isEmpty ? nil : destinations,
+                // A build that forbids disabling never writes the key, so
+                // the config keeps no setting the app would ignore.
+                "updates.check": (!UpdateSource.allowsDisabling || updateCheck) ? nil : false,
             ])
             if launchAtLogin != LaunchAtLogin.isEnabled {
                 try LaunchAtLogin.setEnabled(launchAtLogin)
+            }
+            if UpdateSource.allowsDisabling {
+                store.onUpdateCheckChanged?(updateCheck)
             }
             // The menus read destinations once per refresh, so a saved
             // destination has to trigger one or it appears only on the next.
@@ -2018,6 +2069,18 @@ struct SettingsView: View {
         } catch {
             self.error = "Couldn't write the config: \(error.localizedDescription)"
         }
+    }
+
+    private var updateVersionTitle: String { updateDisplay.versionTitle }
+    private var updateStatusLine: String { updateDisplay.statusLine }
+    private var updateActionTitle: String? { updateDisplay.actionTitle }
+    private var updateDisplay: SettingsUpdateDisplay {
+        SettingsUpdateDisplay(
+            state: store.updateState,
+            releaseVersion: Patchthrough.releaseVersion,
+            hasFeed: UpdateSource.hasFeed,
+            lastChecked: UpdateState().lastCheckedAt
+        )
     }
 
     private var qualitySubtitle: String {
@@ -2176,4 +2239,75 @@ final class PatchthroughWindowController: NSObject, NSWindowDelegate {
         saveFrame()
         NSApp.setActivationPolicy(.accessory)
     }
+}
+
+/// The text of the Settings update row, split out of the view so it can be
+/// tested. These strings carry design rules that a refactor breaks quietly:
+/// sentence case, a capital first letter, and no em dash.
+@MainActor
+struct SettingsUpdateDisplay {
+    let state: UpdateController.State
+    /// Taken as input rather than read from the environment, so the strings
+    /// can be tested. A test binary has no bundle and would otherwise always
+    /// look like a source build.
+    let releaseVersion: String
+    let hasFeed: Bool
+    let lastChecked: Date?
+
+    /// A source build has no release version, so it says so rather than
+    /// printing the "development" placeholder as if it were one.
+    var versionTitle: String {
+        SemVer(releaseVersion) == nil ? "Source build" : "Version \(releaseVersion)"
+    }
+
+    var statusLine: String {
+        switch state {
+        case .idle:
+            guard hasFeed else { return "This build has no update feed" }
+            guard SemVer(releaseVersion) != nil else {
+                return "Updates do not apply to a build made from source"
+            }
+            guard let lastChecked else { return "Not checked yet" }
+            return "Last checked \(Self.checkedFormat.string(from: lastChecked))"
+        case .checking:
+            return "Checking for updates…"
+        case .available(let version):
+            return "Version \(version) is ready to install"
+        case .downloading:
+            return "Downloading the update…"
+        case .verifying:
+            return "Checking the download's signature…"
+        case .installing:
+            return "Installing…"
+        case .waitingForRecordingEnd(let version):
+            return "Version \(version) installs after this recording"
+        case .manualInstall(let version):
+            return "Version \(version) is downloaded and waiting in Finder"
+        case .failed(let reason):
+            return reason
+        }
+    }
+
+    /// Nil hides the button. That is how the busy states read: the status
+    /// line already says what is happening, and there is nothing to press.
+    var actionTitle: String? {
+        switch state {
+        case .idle, .failed:
+            guard hasFeed, SemVer(releaseVersion) != nil else { return nil }
+            return "Check now"
+        case .available(let version):
+            return "Install \(version)"
+        case .manualInstall:
+            return "Show in Finder"
+        case .checking, .downloading, .verifying, .installing, .waitingForRecordingEnd:
+            return nil
+        }
+    }
+
+    private static let checkedFormat: DateFormatter = {
+        let format = DateFormatter()
+        format.dateStyle = .short
+        format.timeStyle = .short
+        return format
+    }()
 }
