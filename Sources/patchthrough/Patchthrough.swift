@@ -4,6 +4,23 @@ import CoreFoundation
 import Foundation
 import UserNotifications
 
+/// Carries a parsed async subcommand into a detached task. `ParsableCommand`
+/// existentials are not `Sendable`, but the value is a plain struct decoded
+/// from argv, and `main()` blocks on a semaphore until the task finishes, so
+/// only one side ever touches it.
+private final class AsyncCommandBox: @unchecked Sendable {
+    private var command: AsyncParsableCommand
+    private(set) var error: Error?
+
+    init(_ command: AsyncParsableCommand) {
+        self.command = command
+    }
+
+    func run() async {
+        do { try await command.run() } catch { self.error = error }
+    }
+}
+
 @main
 struct Patchthrough: AsyncParsableCommand {
     private static var releaseVersion: String {
@@ -38,6 +55,56 @@ struct Patchthrough: AsyncParsableCommand {
         ],
         defaultSubcommand: Run.self
     )
+
+    /// Custom entry point, replacing the one `AsyncParsableCommand`
+    /// synthesises.
+    ///
+    /// That synthesised main runs the chosen command inside a task hopped to
+    /// the main actor, which is to say inside a work item on the serial main
+    /// queue. `Run` then calls `app.run()`, which never returns, so that work
+    /// item never completes and nothing else queued on the main queue can
+    /// start. The effect is silent and total: for the life of the process, no
+    /// `DispatchQueue.main` block and no main-actor `Task` runs. AppKit keeps
+    /// working throughout, because the run loop delivers events directly
+    /// rather than through the queue, which is what makes this look like a UI
+    /// bug rather than a scheduling one.
+    ///
+    /// Measured with the app up: `Thread.isMainThread` was true and a run-loop
+    /// `Timer` fired, while `DispatchQueue.main.async`, a main-actor `Task`,
+    /// and `await MainActor.run` from a detached task all stayed silent.
+    ///
+    /// Two things in this file sat behind exactly that: the `Task` that
+    /// installs the transcription status handler and calls `resumePending`,
+    /// so the menu bar never showed transcription progress and an interrupted
+    /// transcription was never resumed.
+    ///
+    /// Running `Run` straight off the main thread here keeps the main queue
+    /// free. Async subcommands still get an async context, just not one that
+    /// owns the main queue.
+    static func main() {
+        do {
+            let command = try parseAsRoot(nil)
+            if let runCommand = command as? Run {
+                try runCommand.runOnMainThread()
+                return
+            }
+            if let asyncCommand = command as? AsyncParsableCommand {
+                let box = AsyncCommandBox(asyncCommand)
+                let semaphore = DispatchSemaphore(value: 0)
+                Task.detached {
+                    await box.run()
+                    semaphore.signal()
+                }
+                semaphore.wait()
+                if let error = box.error { throw error }
+                return
+            }
+            var mutable = command
+            try mutable.run()
+        } catch {
+            Self.exit(withError: error)
+        }
+    }
 }
 
 /// `patchthrough hand [agent]` stages the newest transcript, or a chosen
@@ -218,7 +285,17 @@ struct Run: AsyncParsableCommand {
     func run() async throws {
         // AsyncArgumentParser may invoke subcommands from a cooperative
         // executor. Explicitly hop to the main actor before touching AppKit.
+        // Patchthrough.main() prefers runOnMainThread(); this stays for any
+        // other caller.
         try await MainActor.run { try runMain() }
+    }
+
+    /// Runs on the thread that called it, which `Patchthrough.main()`
+    /// guarantees is the main thread. Deliberately not a hop: a hop would put
+    /// `app.run()` inside a main-queue work item and block the queue forever.
+    /// See the comment on `Patchthrough.main()`.
+    func runOnMainThread() throws {
+        try MainActor.assumeIsolated { try runMain() }
     }
 
     @MainActor
@@ -287,6 +364,7 @@ struct Run: AsyncParsableCommand {
         FileHandle.standardError.write(Data(
             "patchthrough up · recordings → \(root.path) · ^C to quit\n".utf8
         ))
+
 
         // The sources MUST outlive the run loop. A plain local (or a trailing
         // `_ = sources`) is not enough: its last use is above, so ARC is free to
