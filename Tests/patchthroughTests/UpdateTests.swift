@@ -337,3 +337,40 @@ private let feedFixture = """
     #expect(code.contains("RunLoop.main.perform"))
     #expect(code.contains("Task.detached"))
 }
+
+// MARK: - What the window strip shows
+
+/// The strip is the only update surface a user sees without opening a menu or
+/// the settings sheet, so it has to speak for every state it appears in, and
+/// stay hidden for the ones it should not.
+@Test @MainActor func theWindowStripSpeaksForEveryStateItShows() throws {
+    let version = try #require(SemVer("1.7.1"))
+
+    // Nothing to say, so nothing on screen.
+    #expect(UpdateBannerDisplay(state: .idle) == nil)
+    #expect(UpdateBannerDisplay(state: .checking) == nil)
+
+    let cases: [(UpdateController.State, String, String?)] = [
+        (.available(version), "Version 1.7.1 is ready to install", "Install"),
+        (.downloading, "Downloading the update…", nil),
+        (.verifying, "Checking the download's signature…", nil),
+        (.installing, "Installing the update. Patchthrough will restart", nil),
+        (.waitingForRecordingEnd(version), "Version 1.7.1 installs after this recording", nil),
+        (.manualInstall(version),
+         "Version 1.7.1 is downloaded. Drag Patchthrough to Applications to finish", "Show in Finder"),
+        // A failure stays on screen: a strip that vanished after a click would
+        // leave the user guessing.
+        (.failed("The download does not match the release checksum"),
+         "The download does not match the release checksum. The current version keeps running",
+         "Try again"),
+    ]
+    for (state, message, action) in cases {
+        let shown = try #require(UpdateBannerDisplay(state: state))
+        #expect(shown.message == message)
+        #expect(shown.actionTitle == action)
+        // Design rules: a capital first letter, and no em dash in anything a
+        // user reads.
+        #expect(shown.message.first?.isUppercase == true)
+        #expect(!shown.message.contains("\u{2014}"))
+    }
+}

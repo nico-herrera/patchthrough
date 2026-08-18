@@ -1,6 +1,7 @@
 import AVFoundation
 import FluidAudio
 import Foundation
+import UserNotifications
 
 enum CheckStatus {
     case ok
@@ -21,6 +22,7 @@ enum DoctorReport {
             checkSystemAudio(),
             checkRecordingsRoot(recordingsRoot),
             checkTranscription(),
+            checkNotifications(),
             checkUpdates(),
             checkInstallLocation(),
         ]
@@ -116,6 +118,60 @@ enum DoctorReport {
             )
         }
         return Check(name: name, status: .ok, remediation: nil)
+    }
+
+    /// Whether banners can be shown at all.
+    ///
+    /// Worth its own check because the app has no other way to tell you
+    /// something finished. A transcript landing and an update waiting are both
+    /// banners, so with authorization denied the app posts into the void and
+    /// looks from the outside like a feature that was never built. An unsigned
+    /// build makes it worse: each rebuild is a new code identity, so a grant
+    /// can lapse without anyone touching a setting.
+    static func checkNotifications() -> Check {
+        let name = "notifications"
+        guard runsFromAppBundle else {
+            return Check(
+                name: name,
+                status: .warn("bare binary has no bundle identity, so it cannot post banners"),
+                remediation: "run the installed app from ~/Applications"
+            )
+        }
+
+        // getNotificationSettings is callback-based and answers on an internal
+        // queue, so a semaphore is safe here; doctor is synchronous by design.
+        let semaphore = DispatchSemaphore(value: 0)
+        var status: UNAuthorizationStatus = .notDetermined
+        UNUserNotificationCenter.current().getNotificationSettings { settings in
+            status = settings.authorizationStatus
+            semaphore.signal()
+        }
+        guard semaphore.wait(timeout: .now() + 3) == .success else {
+            return Check(
+                name: name,
+                status: .warn("could not read notification settings"),
+                remediation: nil
+            )
+        }
+
+        switch status {
+        case .authorized, .provisional, .ephemeral:
+            return Check(name: name, status: .ok, remediation: nil)
+        case .denied:
+            return Check(
+                name: name,
+                status: .warn("denied, so transcript and update banners will not appear"),
+                remediation: "System Settings → Notifications → Patchthrough → Allow"
+            )
+        case .notDetermined:
+            return Check(
+                name: name,
+                status: .warn("not yet requested. The app asks on first launch"),
+                remediation: "launch the app from ~/Applications and allow notifications"
+            )
+        @unknown default:
+            return Check(name: name, status: .warn("unrecognised state"), remediation: nil)
+        }
     }
 
     static func checkMicrophone() -> Check {

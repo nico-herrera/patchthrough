@@ -103,6 +103,27 @@ with a `main()` that runs `Run` straight off the main thread and leaves the main
 queue free. Porting that fix here would repair both, and would let this file
 drop its workaround.
 
+## What the user sees
+
+Three surfaces, in the order a user is likely to meet them:
+
+- A notification banner, `Patchthrough: Update available`. macOS places banners
+  top right and files them in Notification Center; the position is not the app's
+  to choose. Clicking one starts the install, which is why update notifications
+  carry an `update.`-prefixed identifier: `didReceive` routes those to the
+  updater instead of opening the window. Because the ETag makes an unchanged
+  feed answer 304, this is one banner per release rather than one per check.
+- A strip under the window titlebar, spanning both panes. 11a has no mock for
+  this state, so it is the minimum that DESIGN_RULES §12 allows: a raised ground
+  for emphasis rather than a colour, neutral text, the chip shape the settings
+  sheet already uses, and nothing red. Dismissing hides that one message; a
+  different state or a later version shows a new strip.
+- The menu bar item, and the Settings row with the version and a check button.
+
+If notification authorization was denied, the banner never appears and the strip
+and menu item are the only signals. `doctor` reports that rather than leaving it
+invisible.
+
 ## When it checks
 
 About every six hours, with a 30-minute timer tolerance and up to 15 minutes of
